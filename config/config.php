@@ -26,7 +26,7 @@ try {
 }
 
 // Project Paths
-define("BASE_URL", "http://localhost/online_exam_system"); // Change according to your project folder
+define("BASE_URL", "http://localhost/online-examination-system"); // Change according to your project folder
 define("UPLOAD_PATH", dirname(__DIR__) . "/uploads");      // For future media/uploads if needed
 define("TEMPLATE_PATH", __DIR__ . "/../templates");        // Absolute path to templates
 
