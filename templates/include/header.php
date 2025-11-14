@@ -10,13 +10,10 @@ require_once __DIR__ . '/../../config/config.php';
   <title>Online Examination System</title>
 
   <!-- FontAwesome Icons -->
-  <link href="<?= BASE_URL ?>/assets/sb2-admin/vendor/fontawesome-free/css/all.min.css" rel="stylesheet">
+  <link href="<?= BASE_URL ?>/assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet">
 
   <!-- SB Admin 2 Styles -->
-  <link href="<?= BASE_URL ?>/assets/sb2-admin/css/sb-admin-2.min.css" rel="stylesheet">
-
-  <!-- Custom Styles -->
-  <link href="<?= BASE_URL ?>/assets/sb2-admin/css/custom.css" rel="stylesheet">
+  <link href="<?= BASE_URL ?>/assets/css/sb-admin-2.min.css" rel="stylesheet">
 
 </head>
 <body id="page-top">
