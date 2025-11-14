@@ -9,7 +9,7 @@
     </button>
 
     <!-- Page Title -->
-    <h5 class="text-primary font-weight-bold mb-0">Online Examination & Question Bank System</h5>
+    <h5 class="text-primary font-weight-bold mb-0">Online Examination System</h5>
 
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ml-auto">
@@ -23,7 +23,7 @@
                 <span class="mr-2 d-none d-lg-inline text-gray-600 small">
                     Admin
                 </span>
-                <img class="img-profile rounded-circle" src="<?= BASE_URL ?>/assets/sb2-admin/img/undraw_profile.svg" alt="Profile">
+                <img class="img-profile rounded-circle" src="<?= BASE_URL ?>/assets/img/undraw_profile_1.svg" alt="Profile">
             </a>
 
             <!-- Dropdown -->
