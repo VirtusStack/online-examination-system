@@ -70,6 +70,4 @@ require_once __DIR__ . '/../include/header.php';
     </div> <!-- End Row -->
 </div> <!-- End Container -->
 
-<!-- Footer -->
-<?php include __DIR__ . "/../include/footer.php"; ?>
-<!-- End of Footer -->
+
