@@ -1,12 +1,7 @@
 <?php
 // /templates/common/login_form.php
 // -------------------------
-// Login page for Property Amenity Marketing System
-// Uses header for CSS & meta
-// No sidebar, topbar, or dashboard elements
-// -------------------------
-
-// Load header (CSS, meta, Bootstrap, etc.)
+// Login page for Online Examination System
 require_once __DIR__ . '/../include/header.php';
 ?>
 
