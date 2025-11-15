@@ -6,7 +6,7 @@
 // Make sure session is started in admin.php
 $adminName = $_SESSION['admin_name'] ?? 'Unknown';
 ?>
-
+ <?php include __DIR__ . '/../include/header.php'; ?>
 <!-- Page Wrapper -->
 <div id="wrapper">
 
@@ -56,8 +56,7 @@ $adminName = $_SESSION['admin_name'] ?? 'Unknown';
                         </div>
                     </div>
 
-                    <!-- Future Dashboard Stats -->
-                    <!-- You can later add cards here: total subjects, exams, questions -->
+      
 
                 </div> <!-- End Row -->
 
