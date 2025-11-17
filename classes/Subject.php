@@ -2,7 +2,7 @@
 // /classes/Subject.php
 // ---------------------------
 // Subject class for CRUD
-// ---------------------------
+
 
 class Subject {
 
