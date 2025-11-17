@@ -1,4 +1,5 @@
 <?php
+// classes/Admin.php
 class Admin {
 
     // Login authentication
@@ -6,6 +7,7 @@ class Admin {
         $stmt = $pdo->prepare("SELECT * FROM admin WHERE email = ?");
         $stmt->execute([$email]);
         $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
 
         if ($admin && password_verify($password, $admin['password_hash'])) {
             return $admin;
