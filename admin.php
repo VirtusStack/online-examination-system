@@ -7,6 +7,8 @@ session_start(); // Start PHP session
 //  Load config and required classes
 require("config/config.php");
 require_once __DIR__ . "/classes/Admin.php";
+require_once __DIR__ . "/classes/Subject.php";
+
 
 //  AUTO-LOGIN USING REMEMBER ME COOKIE
 if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_admin'])) {
@@ -180,7 +182,7 @@ function manageSubjects() {
     $results['currentPage'] = $page;
     $results['totalPages'] = $totalPages;
 
-    require(TEMPLATE_PATH . "/subjects/manage_subject.php");
+    require(TEMPLATE_PATH . "/subjects/manage_subjects.php");
 }
 
 function editSubject() {
