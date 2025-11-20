@@ -3,8 +3,8 @@
 // -------------------------
 // Login page for Online Examination System
 require_once __DIR__ . '/../include/header.php';
-?>
 
+?>
 <!-- Login Form Container -->
 <div class="container mt-5">
     <div class="row justify-content-center">
