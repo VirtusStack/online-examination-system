@@ -3,7 +3,6 @@
 // -------------------------
 // Displays all subjects with Edit/Delete actions
 // Includes pagination (Prev/Next + numbered + Go to page)
-// -------------------------
 
 $results = $results ?? [
     'pageTitle'   => 'Manage Subjects',
