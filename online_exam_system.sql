@@ -3,7 +3,6 @@ USE online_exam_system;
 
 -- Table structure for table `admin`
 --
-
 CREATE TABLE `admin` (
   `admin_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -11,13 +10,6 @@ CREATE TABLE `admin` (
   `password_hash` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `admin`
---
-
-INSERT INTO `admin` (`admin_id`, `name`, `email`, `password_hash`, `created_at`) VALUES
-(1, 'admin', 'admin@12.com', '$2y$10$T3g4wVh2ygCCvDPKOiTeteYmGB6RbLtSTpWN25/glk0z8EnF3vVVS', '0000-00-00 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -98,17 +90,6 @@ CREATE TABLE `subjects` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `subjects`
---
-
-INSERT INTO `subjects` (`subject_id`, `subject_name`, `description`, `created_at`) VALUES
-(1, 'Mathematics', 'Covers algebra, geometry, trigonometry, and basic calculus/', '2025-11-15 04:30:00'),
-(2, 'Physics', 'Covers motion, heat, light, and electricity', '2025-11-15 04:40:00'),
-(3, 'Chemistry', 'Covers organic, inorganic, and physical chemistry', '2025-11-15 04:50:00'),
-(4, 'Biology', 'Covers cell biology, genetics, human body.', '2025-11-15 05:00:00'),
-(5, 'Computer Science', 'Covers basics of programming, DBMS, networking', '2025-11-15 05:10:00');
-
---
 -- Indexes for dumped tables
 --
 
@@ -163,7 +144,7 @@ ALTER TABLE `subjects`
 -- AUTO_INCREMENT for table `admin`
 --
 ALTER TABLE `admin`
-  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `exams`
@@ -193,7 +174,7 @@ ALTER TABLE `question_banks`
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -224,4 +205,3 @@ ALTER TABLE `questions`
 ALTER TABLE `question_banks`
   ADD CONSTRAINT `question_banks_ibfk_1` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`subject_id`) ON DELETE CASCADE;
 COMMIT;
-
