@@ -518,14 +518,17 @@ function editQuestion() {
 // -------------------------
 function newExam() {
     global $pdo;
+
     $results = [
         'message'   => '',
         'pageTitle' => 'Add New Exam',
         'subjects'  => Subject::getAll($pdo),
         'questions' => Question::getAll($pdo),
+        'questions_selected' => []
     ];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
         $subject_id       = (int)($_POST['subject_id'] ?? 0);
         $exam_title       = trim($_POST['exam_title'] ?? '');
         $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
@@ -535,16 +538,20 @@ function newExam() {
         $status           = $_POST['status'] ?? 'Active';
         $selected_questions = $_POST['questions'] ?? [];
 
+        // keep selection for UI
+        $results['questions_selected'] = $selected_questions;
+
         if (empty($exam_title) || $subject_id <= 0) {
             $results['message'] = " Exam title and subject are required!";
         } else {
             $examId = Exam::create($pdo, $subject_id, $exam_title, $duration_minutes, $total_marks, $start_date, $end_date, $status);
-            if ($examId) {
-                // Assign selected questions
-                Exam::setQuestions($pdo, $examId, $selected_questions);
 
+            if ($examId) {
+                Exam::setQuestions($pdo, $examId, $selected_questions);
                 $results['message'] = " Exam added successfully!";
-                $exam_title = '';
+
+                // clear form values
+                $results['questions_selected'] = [];
             } else {
                 $results['message'] = " Error adding exam!";
             }
@@ -603,6 +610,7 @@ function manageExams() {
 
 function editExam() {
     global $pdo;
+
     $results = [
         'message'   => '',
         'pageTitle' => 'Edit Exam',
@@ -618,6 +626,7 @@ function editExam() {
     $assigned_questions = Exam::getQuestions($pdo, $examId);
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
         $examData = [
             'subject_id'       => (int)($_POST['subject_id'] ?? 0),
             'exam_title'       => trim($_POST['exam_title'] ?? ''),
@@ -627,24 +636,34 @@ function editExam() {
             'end_date'         => $_POST['end_date'] ?? null,
             'status'           => $_POST['status'] ?? 'Active',
         ];
-        $selected_questions = $_POST['questions'] ?? [];
 
+        // NEW: Save selected questions to keep UI checked even on errors
+        $selected_questions = $_POST['questions'] ?? [];
+        $results['assigned_questions'] = $selected_questions;
+
+        // Update exam
         if (Exam::update($pdo, $examId, $examData)) {
-            // DELETE old questions before assigning new ones
+
+            // Remove old assignments
             $pdo->prepare("DELETE FROM exam_questions WHERE exam_id = ?")->execute([$examId]);
 
+            // Insert new assigned questions
             Exam::setQuestions($pdo, $examId, $selected_questions);
+
             $results['message'] = " Exam updated successfully!";
         } else {
             $results['message'] = " Error updating exam!";
         }
 
+        // Reload exam after update
         $exam = Exam::getById($pdo, $examId);
-        $assigned_questions = Exam::getQuestions($pdo, $examId);
+    } else {
+        // First time page load → show DB values
+        $results['assigned_questions'] = array_column($assigned_questions, 'question_id');
     }
 
+    // For template
     $results['exam'] = $exam;
-    $results['assigned_questions'] = array_column($assigned_questions, 'question_id');
 
-    require(TEMPLATE_PATH . "/exams/edit_exam.php");
+    require TEMPLATE_PATH . "/exams/edit_exam.php";
 }
