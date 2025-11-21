@@ -2,7 +2,8 @@
 // /templates/question_banks/manage_banks.php
 // -------------------------
 // Displays all question banks with Edit/Delete actions
-// Includes pagination (Prev/Next + numbered + Go to page)
+// Pagination added (Prev/Next + numbered + Go-to page)
+// -------------------------
 
 $results = $results ?? [
     'pageTitle'   => 'Manage Question Banks',
@@ -48,7 +49,6 @@ $offset      = ($currentPage - 1) * $perPage;
                 <!-- Feedback message -->
                 <?php if (!empty($results['message'])): ?>
                     <div class="alert <?= (stripos($results['message'], 'success') !== false) ? 'alert-success' : 'alert-danger' ?> alert-dismissible fade show" role="alert">
-                        <?= (stripos($results['message'], 'success') !== false)  ? '<i class="fas fa-check-circle"></i>'  : '<i class="fas fa-times-circle"></i>' ?>
                         <?= htmlspecialchars($results['message']) ?>
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -63,34 +63,39 @@ $offset      = ($currentPage - 1) * $perPage;
                     </div>
 
                     <div class="card-body">
+
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
                                         <th>Bank Name</th>
-                                        <th>Subject</th>
                                         <th>Description</th>
+                                        <!-- REMOVED total question column -->
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
                                     <?php if (!empty($banks)): ?>
                                         <?php foreach ($banks as $bank): ?>
                                             <tr>
                                                 <td><?= $bank['bank_id'] ?></td>
                                                 <td><?= htmlspecialchars($bank['bank_name']) ?></td>
-                                                <td><?= htmlspecialchars($bank['subject_name'] ?? '-') ?></td>
                                                 <td><?= htmlspecialchars($bank['description'] ?? '-') ?></td>
+
+                                                <!-- REMOVED: total_questions -->
+
                                                 <td>
                                                     <!-- Edit -->
-                                                    <a class="btn btn-sm btn-warning" 
+                                                    <a class="btn btn-sm btn-warning"
                                                        href="<?= BASE_URL ?>/admin.php?action=editBank&id=<?= $bank['bank_id'] ?>">
                                                        <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
 
                                                     <!-- Delete -->
-                                                    <form method="get" action="<?= BASE_URL ?>/admin.php" style="display:inline-block; margin:0 4px;"
+                                                    <form method="get" action="<?= BASE_URL ?>/admin.php"
+                                                          style="display:inline-block; margin:0 4px;"
                                                           onsubmit="return confirm('Are you sure you want to delete this bank?');">
                                                         <input type="hidden" name="action" value="manageBanks">
                                                         <input type="hidden" name="delete" value="<?= $bank['bank_id'] ?>">
@@ -99,11 +104,12 @@ $offset      = ($currentPage - 1) * $perPage;
                                                         </button>
                                                     </form>
                                                 </td>
+
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="6" class="text-center">No banks found.</td>
+                                            <td colspan="4" class="text-center">No banks found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -116,41 +122,28 @@ $offset      = ($currentPage - 1) * $perPage;
 
                                 <!-- Prev Button -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
-                                    <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= max(1, $currentPage - 1) ?>">
+                                    <a class="page-link"
+                                       href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= max(1, $currentPage - 1) ?>">
                                         <i class="fas fa-angle-left"></i> Prev
                                     </a>
                                 </li>
 
-                                <?php if ($currentPage > 3): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=1">1</a>
-                                    </li>
-                                    <?php if ($currentPage > 4): ?>
-                                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-
                                 <?php
+                                // Show page numbers around current page
                                 $start = max(1, $currentPage - 2);
                                 $end   = min($totalPages, $currentPage + 2);
+
                                 for ($i = $start; $i <= $end; $i++): ?>
                                     <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
-                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= $i ?>"><?= $i ?></a>
+                                        <a class="page-link"
+                                           href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= $i ?>"><?= $i ?></a>
                                     </li>
                                 <?php endfor; ?>
 
-                                <?php if ($currentPage < $totalPages - 2):
-                                    if ($currentPage < $totalPages - 3): ?>
-                                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                                    <?php endif; ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= $totalPages ?>"><?= $totalPages ?></a>
-                                    </li>
-                                <?php endif; ?>
-
                                 <!-- Next Button -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
-                                    <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= min($totalPages, $currentPage + 1) ?>">
+                                    <a class="page-link"
+                                       href="<?= BASE_URL ?>/admin.php?action=manageBanks&page=<?= min($totalPages, $currentPage + 1) ?>">
                                         Next <i class="fas fa-angle-right"></i>
                                     </a>
                                 </li>
@@ -160,8 +153,10 @@ $offset      = ($currentPage - 1) * $perPage;
                                     <form method="get" action="<?= BASE_URL ?>/admin.php" class="form-inline">
                                         <input type="hidden" name="action" value="manageBanks">
                                         <label for="gotoPage" class="mr-2 mb-0">Go to:</label>
-                                        <input type="number" min="1" max="<?= $totalPages ?>" name="page" id="gotoPage" class="form-control form-control-sm mr-2" style="width:70px"
-                                            value="<?= $currentPage ?>">
+                                        <input type="number" min="1" max="<?= $totalPages ?>"
+                                            name="page" id="gotoPage"
+                                            class="form-control form-control-sm mr-2"
+                                            style="width:70px" value="<?= $currentPage ?>">
                                         <button type="submit" class="btn btn-sm btn-primary">Go</button>
                                     </form>
                                 </li>
@@ -169,23 +164,17 @@ $offset      = ($currentPage - 1) * $perPage;
                             </ul>
                         </nav>
                         <?php endif; ?>
-
+                      
                     </div>
                 </div>
-                <!-- End of Banks Table Card -->
 
-            </div>
-            <!-- /.container-fluid -->
+            </div> <!-- /.container-fluid -->
 
-        </div>
-        <!-- End of Main Content -->
+        </div> <!-- End of Main Content -->
 
         <!-- Footer -->
         <?php include __DIR__ . "/../include/footer.php"; ?>
-        <!-- End of Footer -->
-
     </div>
-    <!-- End of Content Wrapper -->
 
 </div>
-<!-- End of Page Wrapper -->
+

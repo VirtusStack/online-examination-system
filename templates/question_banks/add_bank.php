@@ -55,20 +55,6 @@ require_once __DIR__ . '/../../config/config.php';
                                     value="<?= htmlspecialchars($results['bank_name'] ?? '') ?>">
                             </div>
 
-                            <!-- Subject Dropdown -->
-                            <div class="form-group mb-3">
-                                <label>Subject:</label>
-                                <select name="subject_id" class="form-control" required>
-                                    <option value="">-- Select Subject --</option>
-                                    <?php foreach ($results['subjects'] ?? [] as $subject): ?>
-                                        <option value="<?= $subject['subject_id'] ?>"
-                                            <?= (isset($results['subject_id']) && $results['subject_id'] == $subject['subject_id']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($subject['subject_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
                             <!-- Description -->
                             <div class="form-group mb-3">
                                 <label>Description:</label>
@@ -96,3 +82,4 @@ require_once __DIR__ . '/../../config/config.php';
 
 </div>
 <!-- End of Page Wrapper -->
+
