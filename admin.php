@@ -256,23 +256,21 @@ function editSubject() {
 // -------------------------
 function newBank() {
     global $pdo;
-    $results = ['message' => '', 'pageTitle' => 'Add New Bank'];
-
-    // Fetch subjects for dropdown
-    $results['subjects'] = Subject::getAll($pdo);
+    $results = [
+        'message'   => '',
+        'pageTitle' => 'Add New Bank'
+    ];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bank_name  = trim($_POST['bank_name'] ?? '');
-        $subject_id = (int)($_POST['subject_id'] ?? 0);
         $description = trim($_POST['description'] ?? '');
 
         if (empty($bank_name)) {
             $results['message'] = " Bank name is required!";
-        } elseif ($subject_id <= 0) {
-            $results['message'] = " Please select a subject!";
         } else {
-            // Insert bank
-            $bankId = QuestionBank::create($pdo, $bank_name, $subject_id, $description);
+            // Create bank
+            $bankId = QuestionBank::create($pdo, $bank_name, $description);
+
             if ($bankId) {
                 $results['message'] = " Bank added successfully!";
                 $bank_name = $description = '';
@@ -285,6 +283,7 @@ function newBank() {
     require(TEMPLATE_PATH . "/question_banks/add_bank.php");
 }
 
+// MANAGE QUESTION BANKS
 function manageBanks() {
     global $pdo;
     $results = [
@@ -296,6 +295,7 @@ function manageBanks() {
     // Handle delete request
     if (isset($_GET['delete'])) {
         $bankId = (int)$_GET['delete'];
+
         if (QuestionBank::delete($pdo, $bankId)) {
             $results['message'] = " Bank deleted!";
         } else {
@@ -313,21 +313,21 @@ function manageBanks() {
     $total = (int)$stmtTotal->fetchColumn();
     $totalPages = ceil($total / $perPage);
 
-    // Fetch banks for current page with subject name
+    // Fetch banks for current page
     $stmt = $pdo->prepare("
-        SELECT qb.bank_id, qb.bank_name, qb.subject_id, qb.description, qb.created_at, s.subject_name
-        FROM question_banks qb
-        LEFT JOIN subjects s ON qb.subject_id = s.subject_id
-        ORDER BY qb.bank_id ASC
+        SELECT bank_id, bank_name, description, created_at
+        FROM question_banks
+        ORDER BY bank_id ASC
         LIMIT :limit OFFSET :offset
     ");
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
+
     $results['banks'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $results['currentPage'] = $page;
-    $results['totalPages'] = $totalPages;
+    $results['totalPages']  = $totalPages;
 
     require(TEMPLATE_PATH . "/question_banks/manage_bank.php");
 }
@@ -339,15 +339,13 @@ function editBank() {
     if (!isset($_GET['id'])) die(" No bank ID given.");
     $bankId = (int)$_GET['id'];
 
-    // Fetch bank and subjects for dropdown
+    // Fetch bank
     $bank = QuestionBank::getById($pdo, $bankId);
-    $results['subjects'] = Subject::getAll($pdo);
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bankData = [
-            'bank_name'  => trim($_POST['bank_name'] ?? ''),
-            'subject_id' => (int)($_POST['subject_id'] ?? 0),
-            'description'=> trim($_POST['description'] ?? '')
+            'bank_name'   => trim($_POST['bank_name'] ?? ''),
+            'description' => trim($_POST['description'] ?? '')
         ];
 
         if (QuestionBank::update($pdo, $bankId, $bankData)) {
@@ -356,7 +354,7 @@ function editBank() {
             $results['message'] = " Error updating bank!";
         }
 
-        $bank = QuestionBank::getById($pdo, $bankId);
+        $bank = QuestionBank::getById($pdo, $bankId); // refresh
     }
 
     $results['bank'] = $bank;
