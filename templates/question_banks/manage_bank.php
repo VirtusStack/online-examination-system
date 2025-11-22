@@ -3,6 +3,7 @@
 // -------------------------
 // Displays all question banks with Edit/Delete actions
 // Pagination added (Prev/Next + numbered + Go-to page)
+// Shows dynamic total questions per bank
 // -------------------------
 
 $results = $results ?? [
@@ -63,7 +64,6 @@ $offset      = ($currentPage - 1) * $perPage;
                     </div>
 
                     <div class="card-body">
-
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead class="table-light">
@@ -71,21 +71,24 @@ $offset      = ($currentPage - 1) * $perPage;
                                         <th>ID</th>
                                         <th>Bank Name</th>
                                         <th>Description</th>
-                                        <!-- REMOVED total question column -->
+                                        <th>Total Questions</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     <?php if (!empty($banks)): ?>
-                                        <?php foreach ($banks as $bank): ?>
+                                        <?php foreach ($banks as $bank):
+                                            // Get total questions dynamically
+                                            $stmt = $pdo->prepare("SELECT COUNT(*) FROM questions WHERE bank_id=?");
+                                            $stmt->execute([$bank['bank_id']]);
+                                            $totalQuestions = $stmt->fetchColumn();
+                                        ?>
                                             <tr>
                                                 <td><?= $bank['bank_id'] ?></td>
                                                 <td><?= htmlspecialchars($bank['bank_name']) ?></td>
                                                 <td><?= htmlspecialchars($bank['description'] ?? '-') ?></td>
-
-                                                <!-- REMOVED: total_questions -->
-
+                                                <td><?= $totalQuestions ?></td>
                                                 <td>
                                                     <!-- Edit -->
                                                     <a class="btn btn-sm btn-warning"
@@ -104,18 +107,18 @@ $offset      = ($currentPage - 1) * $perPage;
                                                         </button>
                                                     </form>
                                                 </td>
-
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="4" class="text-center">No banks found.</td>
+                                            <td colspan="5" class="text-center">No banks found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
 
+                        <!-- Pagination -->
                         <?php if ($totalPages >= 1): ?>
                         <nav aria-label="Pagination" class="mt-4">
                             <ul class="pagination justify-content-center align-items-center">
@@ -129,10 +132,8 @@ $offset      = ($currentPage - 1) * $perPage;
                                 </li>
 
                                 <?php
-                                // Show page numbers around current page
                                 $start = max(1, $currentPage - 2);
                                 $end   = min($totalPages, $currentPage + 2);
-
                                 for ($i = $start; $i <= $end; $i++): ?>
                                     <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
                                         <a class="page-link"
@@ -164,7 +165,7 @@ $offset      = ($currentPage - 1) * $perPage;
                             </ul>
                         </nav>
                         <?php endif; ?>
-                      
+
                     </div>
                 </div>
 
@@ -177,4 +178,3 @@ $offset      = ($currentPage - 1) * $perPage;
     </div>
 
 </div>
-
