@@ -6,32 +6,18 @@ require_once __DIR__ . '/../../config/config.php';
 ?>
 <?php include __DIR__ . "/../include/header.php"; ?>
 
-<!-- Page Wrapper -->
 <div id="wrapper">
-
     <!-- Sidebar -->
     <?php include __DIR__ . "/../include/sidebar.php"; ?>
-    <!-- End of Sidebar -->
 
-    <!-- Content Wrapper -->
     <div id="content-wrapper" class="d-flex flex-column">
-
-        <!-- Main Content -->
         <div id="content">
-
             <!-- Navbar -->
             <?php include __DIR__ . "/../include/navbar.php"; ?>
-            <!-- End of Navbar -->
 
-            <!-- Begin Page Content -->
             <div class="container-fluid">
+                <h1 class="h3 mb-4 text-gray-800"><?= $results['pageTitle'] ?? 'Edit Question' ?></h1>
 
-                <!-- Page Heading -->
-                <h1 class="h3 mb-4 text-gray-800">
-                    <?= $results['pageTitle'] ?? 'Edit Question' ?>
-                </h1>
-
-                <!-- Feedback message -->
                 <?php if (!empty($results['message'])): ?>
                     <div class="alert <?= (stripos($results['message'], 'success') !== false) ? 'alert-success' : 'alert-danger' ?> alert-dismissible fade show" role="alert">
                         <?= htmlspecialchars($results['message']) ?>
@@ -41,13 +27,11 @@ require_once __DIR__ . '/../../config/config.php';
                     </div>
                 <?php endif; ?>
 
-                <!-- Question Form Card -->
                 <div class="card shadow mb-4">
                     <div class="card-body">
-                        <!-- Form submits to admin.php?action=editQuestion&id=XX -->
                         <form method="POST" action="<?= BASE_URL ?>/admin.php?action=editQuestion&id=<?= htmlspecialchars($results['question']['question_id']) ?>">
 
-                            <!-- Question Bank Selection -->
+                            <!-- Question Bank -->
                             <div class="form-group mb-3">
                                 <label>Question Bank:</label>
                                 <select name="bank_id" class="form-control" required>
@@ -55,6 +39,19 @@ require_once __DIR__ . '/../../config/config.php';
                                     <?php foreach($results['banks'] ?? [] as $bank): ?>
                                         <option value="<?= $bank['bank_id'] ?>" <?= ($results['question']['bank_id'] ?? 0) == $bank['bank_id'] ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($bank['bank_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Subject -->
+                            <div class="form-group mb-3">
+                                <label>Subject:</label>
+                                <select name="subject_id" class="form-control" required>
+                                    <option value="">-- Select Subject --</option>
+                                    <?php foreach($results['subjects'] ?? [] as $subject): ?>
+                                        <option value="<?= $subject['subject_id'] ?>" <?= ($results['question']['subject_id'] ?? 0) == $subject['subject_id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($subject['subject_name']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -95,43 +92,31 @@ require_once __DIR__ . '/../../config/config.php';
                                 </select>
                             </div>
 
-                            <!-- Marks & Difficulty -->
+                            <!-- Marks per Question -->
                             <div class="form-group mb-3">
-                                <label>Marks:</label>
-                                <input type="number" step="0.01" name="marks" class="form-control" value="<?= $results['question']['marks'] ?? 1.0 ?>" required>
+                                <label>Marks per Question:</label>
+                                <input type="number" step="0.01" name="marks_per_question" class="form-control" value="<?= $results['question']['marks_per_question'] ?? 1.0 ?>" required>
                             </div>
-                            <div class="form-group mb-3">
-                                <label>Negative Marks:</label>
-                                <input type="number" step="0.01" name="negative_marks" class="form-control" value="<?= $results['question']['negative_marks'] ?? 0.0 ?>">
-                            </div>
+
+                            <!-- Difficulty -->
                             <div class="form-group mb-3">
                                 <label>Difficulty:</label>
-                                <select name="difficulty" class="form-control">
+                                <select name="difficulty" class="form-control" required>
                                     <option value="Easy" <?= ($results['question']['difficulty'] ?? '')=='Easy'?'selected':'' ?>>Easy</option>
                                     <option value="Medium" <?= ($results['question']['difficulty'] ?? '')=='Medium'?'selected':'' ?>>Medium</option>
                                     <option value="Hard" <?= ($results['question']['difficulty'] ?? '')=='Hard'?'selected':'' ?>>Hard</option>
                                 </select>
                             </div>
 
-                            <!-- Submit Button -->
                             <button type="submit" class="btn btn-primary">Update Question</button>
                             <a href="<?= BASE_URL ?>/admin.php?action=manageQuestions" class="btn btn-secondary">Cancel</a>
+
                         </form>
                     </div>
                 </div>
-
             </div>
-            <!-- /.container-fluid -->
-
         </div>
-        <!-- End of Main Content -->
 
-        <!-- Footer -->
         <?php include __DIR__ . "/../include/footer.php"; ?>
-        <!-- End of Footer -->
-
     </div>
-    <!-- End of Content Wrapper -->
-
 </div>
-<!-- End of Page Wrapper -->
