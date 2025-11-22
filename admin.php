@@ -292,15 +292,12 @@ function manageBanks() {
         'banks'     => []
     ];
 
-    // Handle delete request
+    // Handle delete
     if (isset($_GET['delete'])) {
         $bankId = (int)$_GET['delete'];
-
-        if (QuestionBank::delete($pdo, $bankId)) {
-            $results['message'] = " Bank deleted!";
-        } else {
-            $results['message'] = " Error deleting bank!";
-        }
+        $results['message'] = QuestionBank::delete($pdo, $bankId) 
+            ? " Bank deleted!" 
+            : " Error deleting bank!";
     }
 
     // Pagination
@@ -313,17 +310,19 @@ function manageBanks() {
     $total = (int)$stmtTotal->fetchColumn();
     $totalPages = ceil($total / $perPage);
 
-    // Fetch banks for current page
+    // Fetch banks + total questions in one query
     $stmt = $pdo->prepare("
-        SELECT bank_id, bank_name, description, created_at
-        FROM question_banks
-        ORDER BY bank_id ASC
+        SELECT qb.bank_id, qb.bank_name, qb.description, qb.created_at,
+               COUNT(q.question_id) AS total_questions
+        FROM question_banks qb
+        LEFT JOIN questions q ON q.bank_id = qb.bank_id
+        GROUP BY qb.bank_id
+        ORDER BY qb.bank_id DESC
         LIMIT :limit OFFSET :offset
     ");
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
-
     $results['banks'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $results['currentPage'] = $page;
@@ -362,41 +361,43 @@ function editBank() {
     require(TEMPLATE_PATH . "/question_banks/edit_bank.php");
 }
 
-// -------------------------
+// ------------------------- 
 // QUESTION MANAGEMENT
 // -------------------------
 
 function newQuestion() {
     global $pdo;
 
-    // Initialize results array for template
     $results = [
         'message'   => '',
         'pageTitle' => 'Add New Question',
-        'banks'     => QuestionBank::getAll($pdo) // Fetch all question banks for dropdown
+        'banks'     => QuestionBank::getAll($pdo),
+        'subjects'  => Subject::getAll($pdo)
     ];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $bank_id        = (int)($_POST['bank_id'] ?? 0);
-        $question_text  = trim($_POST['question_text'] ?? '');
-        $option_a       = trim($_POST['option_a'] ?? '');
-        $option_b       = trim($_POST['option_b'] ?? '');
-        $option_c       = trim($_POST['option_c'] ?? '');
-        $option_d       = trim($_POST['option_d'] ?? '');
-        $correct_option = $_POST['correct_option'] ?? '';
-        $marks          = floatval($_POST['marks'] ?? 1.0);
-        $negative_marks = floatval($_POST['negative_marks'] ?? 0.0);
-        $difficulty     = $_POST['difficulty'] ?? 'Easy';
+        $bank_id            = (int)($_POST['bank_id'] ?? 0);
+        $subject_id         = (int)($_POST['subject_id'] ?? 0);
+        $question_text      = trim($_POST['question_text'] ?? '');
+        $option_a           = trim($_POST['option_a'] ?? '');
+        $option_b           = trim($_POST['option_b'] ?? '');
+        $option_c           = trim($_POST['option_c'] ?? '');
+        $option_d           = trim($_POST['option_d'] ?? '');
+        $correct_option     = $_POST['correct_option'] ?? '';
+        $marks_per_question = floatval($_POST['marks_per_question'] ?? 1.0);
+        $difficulty         = $_POST['difficulty'] ?? 'Easy';
 
-        // Validation
-        if ($bank_id <= 0 || empty($question_text) || empty($option_a) || empty($option_b) || empty($correct_option)) {
+        if ($bank_id <= 0 || $subject_id <= 0 || empty($question_text) || empty($option_a) || empty($option_b) || empty($correct_option)) {
             $results['message'] = "Please fill all required fields!";
         } else {
-            // Insert question
-            $questionId = Question::create($pdo, $bank_id, $question_text, $option_a, $option_b, $option_c, $option_d, $correct_option, $marks, $negative_marks, $difficulty);
+            $questionId = Question::create(
+                $pdo, $bank_id, $subject_id, $question_text,
+                $option_a, $option_b, $option_c, $option_d,
+                $correct_option, $marks_per_question, $difficulty
+            );
+
             if ($questionId) {
                 $results['message'] = "Question added successfully!";
-                // Clear form fields
                 $_POST = [];
             } else {
                 $results['message'] = "Error adding question!";
@@ -404,7 +405,6 @@ function newQuestion() {
         }
     }
 
-    // Load add question template
     require(TEMPLATE_PATH . "/questions/add_question.php");
 }
 
@@ -417,7 +417,6 @@ function manageQuestions() {
         'questions'  => []
     ];
 
-    // Handle delete request
     if (isset($_GET['delete'])) {
         $questionId = (int)$_GET['delete'];
         if (Question::delete($pdo, $questionId)) {
@@ -427,26 +426,20 @@ function manageQuestions() {
         }
     }
 
-    // Pagination setup
     $perPage = 25;
     $page    = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $offset  = ($page - 1) * $perPage;
 
-    // Total questions count
-    $stmtTotal = $pdo->query("
-        SELECT COUNT(*) 
-        FROM questions q
-        LEFT JOIN question_banks b ON q.bank_id = b.bank_id
-    ");
+    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM questions");
     $total = (int)$stmtTotal->fetchColumn();
     $totalPages = ceil($total / $perPage);
 
-    // Fetch questions for current page
     $stmt = $pdo->prepare("
-        SELECT q.question_id, q.question_text, q.correct_option, q.marks, q.negative_marks, q.difficulty, q.created_at,
-               b.bank_name
+        SELECT q.question_id, q.question_text, q.correct_option, q.marks_per_question, q.difficulty,
+               b.bank_name, s.subject_name
         FROM questions q
         LEFT JOIN question_banks b ON q.bank_id = b.bank_id
+        LEFT JOIN subjects s ON q.subject_id = s.subject_id
         ORDER BY q.question_id ASC
         LIMIT :limit OFFSET :offset
     ");
@@ -460,7 +453,6 @@ function manageQuestions() {
     $results['total']       = $total;
     $results['perPage']     = $perPage;
 
-    // Load manage questions template
     require(TEMPLATE_PATH . "/questions/manage_questions.php");
 }
 
@@ -470,44 +462,36 @@ function editQuestion() {
     $results = [
         'message'   => '',
         'pageTitle' => 'Edit Question',
-        'banks'     => QuestionBank::getAll($pdo)
+        'banks'     => QuestionBank::getAll($pdo),
+        'subjects'  => Subject::getAll($pdo)
     ];
 
     if (!isset($_GET['id'])) die("No question ID given.");
     $questionId = (int)$_GET['id'];
 
-    // Fetch question
     $question = Question::getById($pdo, $questionId);
-
     if (!$question) die("Question not found.");
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $questionData = [
-            'bank_id'        => (int)($_POST['bank_id'] ?? 0),
-            'question_text'  => trim($_POST['question_text'] ?? ''),
-            'option_a'       => trim($_POST['option_a'] ?? ''),
-            'option_b'       => trim($_POST['option_b'] ?? ''),
-            'option_c'       => trim($_POST['option_c'] ?? ''),
-            'option_d'       => trim($_POST['option_d'] ?? ''),
-            'correct_option' => $_POST['correct_option'] ?? '',
-            'marks'          => floatval($_POST['marks'] ?? 1.0),
-            'negative_marks' => floatval($_POST['negative_marks'] ?? 0.0),
-            'difficulty'     => $_POST['difficulty'] ?? 'Easy'
+            'bank_id'            => (int)($_POST['bank_id'] ?? 0),
+            'subject_id'         => (int)($_POST['subject_id'] ?? 0),
+            'question_text'      => trim($_POST['question_text'] ?? ''),
+            'option_a'           => trim($_POST['option_a'] ?? ''),
+            'option_b'           => trim($_POST['option_b'] ?? ''),
+            'option_c'           => trim($_POST['option_c'] ?? ''),
+            'option_d'           => trim($_POST['option_d'] ?? ''),
+            'correct_option'     => $_POST['correct_option'] ?? '',
+            'marks_per_question' => floatval($_POST['marks_per_question'] ?? 1.0),
+            'difficulty'         => $_POST['difficulty'] ?? 'Easy'
         ];
 
-        if (Question::update($pdo, $questionId, $questionData)) {
-            $results['message'] = "Question updated successfully!";
-        } else {
-            $results['message'] = "Error updating question!";
-        }
-
-        // Refresh question
+        $success = Question::update($pdo, $questionId, $questionData);
+        $results['message'] = $success ? "Question updated successfully!" : "Error updating question!";
         $question = Question::getById($pdo, $questionId);
     }
 
     $results['question'] = $question;
-
-    // Load edit question template
     require(TEMPLATE_PATH . "/questions/edit_question.php");
 }
 
