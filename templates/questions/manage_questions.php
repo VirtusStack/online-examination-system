@@ -7,7 +7,7 @@
 $results = $results ?? [
     'pageTitle'   => 'Manage Questions',
     'message'     => '',
-    'questions'  => [],
+    'questions'   => [],
     'currentPage' => 1,
     'totalPages'  => 1,
     'total'       => 0,
@@ -25,13 +25,11 @@ $offset      = ($currentPage - 1) * $perPage;
 <?php include __DIR__ . "/../include/header.php"; ?>
 
 <div id="wrapper">
-
     <!-- Sidebar -->
     <?php include __DIR__ . "/../include/sidebar.php"; ?>
 
     <div id="content-wrapper" class="d-flex flex-column">
         <div id="content">
-
             <!-- Navbar -->
             <?php include __DIR__ . "/../include/navbar.php"; ?>
 
@@ -68,6 +66,7 @@ $offset      = ($currentPage - 1) * $perPage;
                                     <tr>
                                         <th>ID</th>
                                         <th>Bank</th>
+                                        <th>Subject</th>
                                         <th>Question</th>
                                         <th>Correct</th>
                                         <th>Marks</th>
@@ -81,9 +80,10 @@ $offset      = ($currentPage - 1) * $perPage;
                                             <tr>
                                                 <td><?= $q['question_id'] ?></td>
                                                 <td><?= htmlspecialchars($q['bank_name'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($q['subject_name'] ?? '-') ?></td>
                                                 <td><?= htmlspecialchars($q['question_text']) ?></td>
                                                 <td><?= htmlspecialchars($q['correct_option']) ?></td>
-                                                <td><?= htmlspecialchars($q['marks']) ?></td>
+                                                <td><?= htmlspecialchars($q['marks_per_question']) ?></td>
                                                 <td><?= htmlspecialchars($q['difficulty']) ?></td>
                                                 <td>
                                                     <!-- Edit -->
@@ -113,7 +113,7 @@ $offset      = ($currentPage - 1) * $perPage;
                             </table>
                         </div>
 
-                        <!-- Pagination (like Subject/Bank) -->
+                        <!-- Pagination -->
                         <?php if ($totalPages >= 1): ?>
                         <nav aria-label="Pagination" class="mt-4">
                             <ul class="pagination justify-content-center align-items-center">
@@ -158,20 +158,9 @@ $offset      = ($currentPage - 1) * $perPage;
 
                     </div>
                 </div>
-                <!-- End of Questions Table Card -->
-
             </div>
-            <!-- /.container-fluid -->
-
         </div>
-        <!-- End of Main Content -->
 
-        <!-- Footer -->
         <?php include __DIR__ . "/../include/footer.php"; ?>
-        <!-- End of Footer -->
-
     </div>
-    <!-- End of Content Wrapper -->
-
 </div>
-<!-- End of Page Wrapper -->
