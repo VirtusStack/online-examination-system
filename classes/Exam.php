@@ -38,6 +38,11 @@ class Exam {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+   public static function countAll($pdo) {
+       $stmt = $pdo->query("SELECT COUNT(*) FROM exams");
+       return $stmt->fetchColumn();
+     }
+
     // UPDATE exam
     public static function update($pdo, $exam_id, $data) {
         try {
