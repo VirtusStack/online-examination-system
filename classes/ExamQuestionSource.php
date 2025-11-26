@@ -2,7 +2,6 @@
 // /classes/ExamQuestionSource.php
 // ---------------------------
 // ExamQuestionSource class for multi-subject question assignment
-// Bank references removed
 
 class ExamQuestionSource {
 
@@ -24,7 +23,14 @@ class ExamQuestionSource {
     public static function getByExam($pdo, $exam_id) {
         $stmt = $pdo->prepare("SELECT * FROM exam_question_sources WHERE exam_id=?");
         $stmt->execute([$exam_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sources = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ensure question_limit is treated as integer or null for unlimited fetch
+        foreach ($sources as &$source) {
+            $source['question_limit'] = !empty($source['question_limit']) ? (int)$source['question_limit'] : null;
+        }
+
+        return $sources;
     }
 
     // DELETE a source
