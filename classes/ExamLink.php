@@ -14,7 +14,11 @@ class ExamLink {
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([$exam_id, $unique_link, $password, $student_name, $student_email, $student_class, $expires_at]);
-            return $unique_link;
+
+            // Return the full clickable URL for admin
+            $base_url = defined('BASE_URL') ? BASE_URL : 'http://localhost/online_exam_system/student.php';
+            return $base_url . "/student.php?link=" . $unique_link;
+
         } catch (PDOException $e) {
             error_log("Create exam link failed: " . $e->getMessage());
             return false;

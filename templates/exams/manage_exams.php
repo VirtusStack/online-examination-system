@@ -69,11 +69,9 @@ $offset      = ($currentPage - 1) * $perPage;
                                     <tr>
                                         <th>ID</th>
                                         <th>Exam Title</th>
-                                        <th>Bank</th>
                                         <th>Total Questions</th>
                                         <th>Duration</th>
                                         <th>Status</th>
-                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -83,11 +81,9 @@ $offset      = ($currentPage - 1) * $perPage;
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
                                                 <td><?= htmlspecialchars($exam['exam_title']) ?></td>
-                                                <td><?= htmlspecialchars($exam['bank_name'] ?? '-') ?></td>
                                                 <td><?= $exam['total_questions'] ?></td>
                                                 <td><?= $exam['duration_minutes'] ?> min</td>
                                                 <td><?= $exam['status'] ?></td>
-                                                <td><?= htmlspecialchars($exam['created_at'] ?? '-') ?></td>
                                                 <td>
                                                     <!-- Edit Exam -->
                                                     <a class="btn btn-sm btn-warning" 
