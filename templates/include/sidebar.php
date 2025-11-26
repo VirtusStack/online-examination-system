@@ -66,19 +66,25 @@
         </div>
     </li>
 
-    <!-- Exams -->
-    <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseExams">
-            <i class="fas fa-fw fa-file-alt"></i>
-            <span>Exams</span>
-        </a>
-        <div id="collapseExams" class="collapse" data-parent="#accordionSidebar">
-            <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageExams">Manage Exams</a>
-                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newExam">Create Exam</a>
-            </div>
-        </div>
-    </li>
+<!-- Exams -->
+<li class="nav-item">
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseExams">
+        <i class="fas fa-fw fa-file-alt"></i>
+        <span>Exams</span>
+    </a>
+    <div id="collapseExams" class="collapse" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageExams">Manage Exams</a>
+            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newExam">Create Exam</a>
+
+            <!-- Generate Links  -->
+            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=generateLinks">Generate Exam Links</a>
+
+             </div>
+    </div>
+</li>
+
+
 
     <hr class="sidebar-divider d-none d-md-block">
 
