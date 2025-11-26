@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS online_exam_system;
 USE online_exam_system;
 
-CREATE TABLE `admin` (
+CREATE TABLE IF NOT EXISTS `admin` (
   `admin_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE `admin` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exams` (
+CREATE TABLE IF NOT EXISTS `exams` (
   `exam_id` int(11) NOT NULL,
   `exam_title` varchar(200) NOT NULL,
   `exam_description` text DEFAULT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE `exams` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exam_answers` (
+CREATE TABLE IF NOT EXISTS `exam_answers` (
   `id` int(11) NOT NULL,
   `result_id` int(11) NOT NULL,
   `question_id` int(11) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE `exam_answers` (
   `is_correct` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exam_links` (
+CREATE TABLE IF NOT EXISTS `exam_links` (
   `link_id` int(11) NOT NULL,
   `exam_id` int(11) NOT NULL,
   `unique_link` varchar(255) NOT NULL,
@@ -46,13 +46,13 @@ CREATE TABLE `exam_links` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exam_questions` (
+CREATE TABLE IF NOT EXISTS `exam_questions` (
   `id` int(11) NOT NULL,
   `exam_id` int(11) NOT NULL,
   `question_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exam_question_sources` (
+CREATE TABLE IF NOT EXISTS `exam_question_sources` (
   `id` int(11) NOT NULL,
   `exam_id` int(11) NOT NULL,
   `bank_id` int(11) DEFAULT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE `exam_question_sources` (
   `question_limit` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `exam_results` (
+CREATE TABLE IF NOT EXISTS `exam_results` (
   `result_id` int(11) NOT NULL,
   `link_id` int(11) NOT NULL,
   `exam_id` int(11) NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE `exam_results` (
   `submitted_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `questions` (
+CREATE TABLE IF NOT EXISTS `questions` (
   `question_id` int(11) NOT NULL,
   `bank_id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL,
@@ -87,14 +87,14 @@ CREATE TABLE `questions` (
   `difficulty` enum('Easy','Medium','Hard') DEFAULT 'Easy'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `question_banks` (
+CREATE TABLE IF NOT EXISTS `question_banks` (
   `bank_id` int(11) NOT NULL,
   `bank_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `subjects` (
+CREATE TABLE IF NOT EXISTS `subjects` (
   `subject_id` int(11) NOT NULL,
   `subject_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
