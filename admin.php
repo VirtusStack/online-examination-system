@@ -671,6 +671,7 @@ function assignQuestions() {
     if (!isset($_GET['id'])) die("No exam ID given.");
     $examId = (int)$_GET['id'];
 
+    // Prepare results array
     $results = [
         'message'  => '',
         'pageTitle'=> 'Assign Questions to Exam',
@@ -681,40 +682,65 @@ function assignQuestions() {
     ];
 
     $questions = [];
+
+    // Loop through each exam source to fetch questions
     foreach ($results['sources'] as $source) {
         $query  = "SELECT * FROM questions WHERE 1=1";
         $params = [];
 
-        if (!empty($source['bank_id'])) { $query .= " AND bank_id=?"; $params[] = $source['bank_id']; }
-        if (!empty($source['subject_id'])) { $query .= " AND subject_id=?"; $params[] = $source['subject_id']; }
-        if (!empty($source['difficulty'])) { $query .= " AND difficulty=?"; $params[] = $source['difficulty']; }
+        // Apply filters only if they exist
+        if (!empty($source['bank_id'])) { 
+            $query .= " AND bank_id=?"; 
+            $params[] = $source['bank_id']; 
+        }
+        if (!empty($source['subject_id'])) { 
+            $query .= " AND subject_id=?"; 
+            $params[] = $source['subject_id']; 
+        }
+        if (!empty($source['difficulty'])) { 
+            $query .= " AND difficulty=?"; 
+            $params[] = $source['difficulty']; 
+        }
 
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $allQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!empty($source['question_limit'])) { shuffle($allQuestions); $allQuestions = array_slice($allQuestions, 0, $source['question_limit']); }
+        // Shuffle and apply question limit if more questions exist
+        if (!empty($source['question_limit'])) {
+            shuffle($allQuestions);
+            $allQuestions = array_slice($allQuestions, 0, $source['question_limit']);
+        }
 
+        // Merge into final questions array
         $questions = array_merge($questions, $allQuestions);
     }
 
     $results['questions'] = $questions;
 
+    // POST request: assign questions
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Remove all existing questions for this exam first
         ExamQuestion::removeAllByExam($pdo, $examId);
 
         if (isset($_POST['auto_select'])) {
-            $totalQuestions = (int)($_POST['total_questions'] ?? $results['exam']['total_questions']);
+            $totalQuestions = (int)($_POST['total_questions'] ?? count($questions));
             shuffle($questions);
             $selectedQuestions = array_slice($questions, 0, $totalQuestions);
-            foreach ($selectedQuestions as $q) { ExamQuestion::add($pdo, $examId, $q['question_id']); }
+            foreach ($selectedQuestions as $q) {
+                ExamQuestion::add($pdo, $examId, $q['question_id']);
+            }
             $results['message'] = "Questions assigned automatically!";
         } else {
-            foreach ($_POST['question_ids'] ?? [] as $qId) { ExamQuestion::add($pdo, $examId, (int)$qId); }
+            // Manual selection via checkboxes
+            foreach ($_POST['question_ids'] ?? [] as $qId) {
+                ExamQuestion::add($pdo, $examId, (int)$qId);
+            }
             $results['message'] = "Questions assigned manually!";
         }
 
-        $results['assigned'] = ExamQuestion::getByExam($pdo, $examId); // Refresh
+        // Refresh assigned questions
+        $results['assigned'] = ExamQuestion::getByExam($pdo, $examId);
     }
 
     require(TEMPLATE_PATH . "/exams/assign_questions.php");

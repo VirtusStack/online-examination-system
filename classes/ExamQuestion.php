@@ -27,10 +27,22 @@ class ExamQuestion {
         }
     }
 
+    // REMOVE all questions from an exam
+    public static function removeAllByExam($pdo, $exam_id) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM exam_questions WHERE exam_id=?");
+            return $stmt->execute([$exam_id]);
+        } catch (PDOException $e) {
+            error_log("Remove all exam questions failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
     // GET all questions for exam
     public static function getByExam($pdo, $exam_id) {
         $stmt = $pdo->prepare("
-            SELECT eq.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.marks_per_question, q.difficulty 
+            SELECT eq.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, 
+                   q.correct_option, q.marks_per_question, q.difficulty 
             FROM exam_questions eq
             JOIN questions q ON eq.question_id = q.question_id
             WHERE eq.exam_id=?
