@@ -1,21 +1,46 @@
 <?php
 session_start();
 
-define('LOCK_FILE', __DIR__ . '/../config.php');
+// Change LOCK_FILE for testing, so your main config stays safe
+define('LOCK_FILE', __DIR__ . '/../config_test.php');
+
+$already_installed = file_exists(LOCK_FILE);
 $error = '';
 $success = '';
 $step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
 
-// Step 0: If config exists, stop
-if (file_exists(LOCK_FILE)) {
-    die('<div style="width:400px;margin:100px auto;padding:20px;border:1px solid #ccc;text-align:center;">
-            <h2>System Already Installed ✅</h2>
-            <p>No further installation needed.</p>
-            <p><strong>Important:</strong> Delete the trash folder for security.</p>
-        </div>');
+// ----------------------------
+// Helper: execute SQL safely
+// ----------------------------
+function run_sql_file($conn, $file_path) {
+    if (!file_exists($file_path)) return false;
+
+    $sql = file_get_contents($file_path);
+
+    // Remove comments
+    $sql = preg_replace('/--.*\n/', '', $sql);
+    $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
+
+    // Split safely by semicolon outside quotes
+    $queries = preg_split('/;(?=(?:[^\'"]|\'[^\']*\'|"[^"]*")*$)/m', $sql);
+
+    foreach ($queries as $q) {
+        $q = trim($q);
+        if ($q) {
+            if (!$conn->query($q)) {
+                // Ignore duplicate key errors
+                if (!str_contains($conn->error, 'Duplicate')) {
+                    throw new Exception("SQL Error: " . $conn->error . " -- Query: " . $q);
+                }
+            }
+        }
+    }
+    return true;
 }
 
+// ----------------------------
 // Step 1: MySQL connection
+// ----------------------------
 if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $host = trim($_POST['db_host']);
     $user = trim($_POST['db_user']);
@@ -33,7 +58,9 @@ if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Step 2: Database & admin setup
+// ----------------------------
+// Step 2: Database & Admin Setup
+// ----------------------------
 if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $db_name = trim($_POST['db_name']);
     $timezone = trim($_POST['timezone']);
@@ -52,59 +79,30 @@ if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($conn->connect_error) {
             $error = "Connection failed: " . $conn->connect_error;
         } else {
-            // Create database
-            $conn->query("CREATE DATABASE IF NOT EXISTS `$db_name` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-            $conn->select_db($db_name);
-            $conn->query("SET time_zone = '$timezone'");
+            try {
+                // Create DB if not exists
+                $conn->query("CREATE DATABASE IF NOT EXISTS `$db_name` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+                $conn->select_db($db_name);
 
-            // Check existing tables
-            $required_tables = ['admin','exams','exam_answers','exam_links','exam_questions',
-                                'exam_question_sources','exam_results','questions','question_banks','subjects'];
+                // Set timezone
+                $conn->query("SET time_zone = '$timezone'");
 
-            $existing_tables = [];
-            $tables_result = $conn->query("SHOW TABLES");
-            while ($row = $tables_result->fetch_array()) {
-                $existing_tables[] = $row[0];
-            }
+                // Import main database safely
+                run_sql_file($conn, __DIR__ . '/database.sql');
 
-            $tables_exist = array_intersect($required_tables, $existing_tables);
-
-            if (empty($tables_exist)) {
-                // Import main database
-                $main_sql_file = __DIR__ . '/database.sql';
-                if (!file_exists($main_sql_file)) {
-                    $error = "database.sql file not found!";
-                } else {
-                    $main_sql = file_get_contents($main_sql_file);
-                    $conn->multi_query($main_sql);
-                    do { } while ($conn->more_results() && $conn->next_result());
-                }
-
-                // Import dummy data if selected
+                // Import dummy data safely if selected
                 if ($install_dummy) {
-                    $dummy_sql_file = __DIR__ . '/dummy.sql';
-                    if (file_exists($dummy_sql_file)) {
-                        $dummy_sql = file_get_contents($dummy_sql_file);
-                        $conn->multi_query($dummy_sql);
-                        do { } while ($conn->more_results() && $conn->next_result());
-                    }
+                    run_sql_file($conn, __DIR__ . '/dummy.sql');
                 }
 
-                $success = "Installation completed successfully! ✅";
-            } else {
-                $success = "Database already installed. Only new admin or dummy data will be added. ✅";
-            }
-
-            // Insert admin safely
-            if ($admin_user && $admin_pass) {
+                // Create admin if not exists
                 $hashed_pass = password_hash($admin_pass, PASSWORD_DEFAULT);
-                $conn->query("INSERT INTO admin (name,email,password_hash)
-                              SELECT * FROM (SELECT '$admin_user','admin@example.com','$hashed_pass') AS tmp
-                              WHERE NOT EXISTS (SELECT 1 FROM admin WHERE name='$admin_user') LIMIT 1");
-            }
+                $conn->query("INSERT INTO admin (name,email,password_hash) 
+                             VALUES ('$admin_user','admin@example.com','$hashed_pass')
+                             ON DUPLICATE KEY UPDATE admin_id=admin_id");
 
-            // Write config
-            $config_content = "<?php
+                // Write config
+                $config_content = "<?php
 return [
     'host' => '$host',
     'user' => '$user',
@@ -113,9 +111,14 @@ return [
     'timezone' => '$timezone'
 ];
 ?>";
-            file_put_contents(LOCK_FILE, $config_content);
+                file_put_contents(LOCK_FILE, $config_content);
 
-            $step = 3; // Finished
+                $success = "Installation completed successfully! Delete 'trash' folder for security.";
+                $step = 3; // finished
+
+            } catch (Exception $e) {
+                $error = $e->getMessage();
+            }
         }
     }
 }
@@ -126,25 +129,15 @@ return [
 <head>
     <title>Project Installer</title>
     <style>
-        body { font-family: Arial; background: #f4f4f4; }
-        .installer-box {
-            width: 400px;
-            margin: 100px auto;
-            padding: 30px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        input[type=text], input[type=password] {
-            width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box;
-        }
-        button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+        body { font-family: Arial; display:flex; justify-content:center; align-items:center; height:100vh; background:#f7f7f7; }
+        .installer { background:white; padding:30px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.2); width:400px; }
+        input[type=text], input[type=password] { width:100%; padding:8px; margin:5px 0; }
+        button { padding:10px 20px; }
     </style>
 </head>
 <body>
-
-<div class="installer-box">
-<h2 style="text-align:center;">Project Installation</h2>
+<div class="installer">
+<h2>Project Installation</h2>
 
 <?php if($error) echo "<p style='color:red;'>$error</p>"; ?>
 <?php if($success) echo "<p style='color:green;'>$success</p>"; ?>
@@ -152,28 +145,28 @@ return [
 <?php if($step === 1): ?>
     <form method="POST">
         <h3>Step 1: MySQL Connection</h3>
-        <input type="text" name="db_host" placeholder="Host" value="localhost" required>
-        <input type="text" name="db_user" placeholder="DB User" required>
-        <input type="password" name="db_pass" placeholder="DB Password">
+        <input type="text" name="db_host" placeholder="Host" value="localhost" required><br>
+        <input type="text" name="db_user" placeholder="DB User" required><br>
+        <input type="password" name="db_pass" placeholder="DB Password"><br>
         <button type="submit">Next</button>
     </form>
 
 <?php elseif($step === 2): ?>
     <form method="POST">
         <h3>Step 2: Site & Admin Setup</h3>
-        <input type="text" name="db_name" placeholder="Database Name" value="online_exam_system" required>
-        <input type="text" name="timezone" placeholder="Timezone (e.g., +05:30)" value="+05:30" required>
-        <input type="text" name="admin_user" placeholder="Admin Name">
-        <input type="password" name="admin_pass" placeholder="Admin Password">
-        <input type="checkbox" name="dummy_data" value="1"> Install dummy data
-        <button type="submit">Install / Update</button>
+        <input type="text" name="db_name" placeholder="Database Name" required><br>
+        <input type="text" name="timezone" placeholder="Timezone (e.g., +05:30)" value="+05:30" required><br>
+        <input type="text" name="admin_user" placeholder="Admin Name" required><br>
+        <input type="password" name="admin_pass" placeholder="Admin Password" required><br>
+        <input type="checkbox" name="dummy_data" value="1"> Install dummy data<br><br>
+        <button type="submit">Install</button>
     </form>
 
 <?php elseif($step === 3): ?>
-    <p style="text-align:center;">Installation finished! ✅</p>
-    <p style="text-align:center;"><strong>Important:</strong> Delete the 'trash' folder now for security.</p>
+    <p>Installation finished! ✅</p>
+    <?php if($already_installed) echo "<p>Database already exists. Only new admin or dummy data added.</p>"; ?>
+    <p><strong>Important:</strong> Delete the 'trash' folder now for security.</p>
 <?php endif; ?>
-
 </div>
 </body>
 </html>

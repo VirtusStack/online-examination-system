@@ -1,6 +1,3 @@
-CREATE DATABASE IF NOT EXISTS online_exam_system;
-USE online_exam_system;
-
 CREATE TABLE IF NOT EXISTS `admin` (
   `admin_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
