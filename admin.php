@@ -12,6 +12,8 @@ require_once __DIR__ . "/classes/Subject.php";
 require_once __DIR__ . "/classes/QuestionBank.php";
 require_once __DIR__ . "/classes/Question.php";
 require_once __DIR__ . "/classes/Exam.php";
+require_once __DIR__ . "/classes/Classroom.php";
+require_once __DIR__ . "/classes/Student.php";
 
 //  AUTO-LOGIN USING REMEMBER ME COOKIE
 if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_admin'])) {
@@ -95,17 +97,33 @@ case 'editSubject':
         editExam();
         break;
 
-    case 'assignQuestions':
-        assignQuestions();
-        break;
+// STUDENT MODULE ROUTES
+case 'newStudent':
+    newStudent();
+    break;
 
-    case 'generateLinks':
-        generateLinks();
-        break;
+case 'manageStudents':
+    manageStudents();
+    break;
 
-    case 'viewResults':
-        viewResults();
-        break;
+case 'editStudent':
+    editStudent();
+    break;
+
+// CLASSROOM MODULE ROUTES
+case 'newClassroom':
+    newClassroom();
+    break;
+
+case 'manageClasses':
+    manageClasses();
+    break;
+
+case 'editClassroom':
+    editClassroom();
+    break;
+
+
 }
 
 // FUNCTIONS
@@ -769,4 +787,200 @@ function editExam() {
     }
 
     require(TEMPLATE_PATH . "/exams/edit_exam.php");
+}
+
+// -------------------------
+// CLASSROOM MANAGEMENT
+// -------------------------
+function newClassroom() {
+    global $pdo;
+    $results = ['message' => '', 'pageTitle' => 'Add New Class'];
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $class_name = trim($_POST['class_name'] ?? '');
+
+        if (empty($class_name)) {
+            $results['message'] = "Class name is required!";
+        } else {
+            $classId = Classroom::create($pdo, $class_name);
+            if ($classId) {
+                $results['message'] = "Class added successfully!";
+                $class_name = '';
+            } else {
+                $results['message'] = "Error adding class!";
+            }
+        }
+    }
+
+    require(TEMPLATE_PATH . "/classrooms/add_class.php");
+}
+
+//manage classes
+function manageClasses() {
+    global $pdo;
+    $results = [
+        'message'   => '',
+        'pageTitle' => 'Manage Classes',
+        'classes'   => []
+    ];
+
+    // Handle delete
+    if (isset($_GET['delete'])) {
+        $classId = (int)$_GET['delete'];
+        if (Classroom::delete($pdo, $classId)) {
+            $results['message'] = "Class deleted!";
+        } else {
+            $results['message'] = "Error deleting class!";
+        }
+    }
+
+    // Pagination
+    $perPage = 25;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $offset = ($page - 1) * $perPage;
+
+    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM classrooms");
+    $total = (int)$stmtTotal->fetchColumn();
+    $totalPages = ceil($total / $perPage);
+
+    $stmt = $pdo->prepare("SELECT class_id, class_name FROM classrooms ORDER BY class_id ASC LIMIT :limit OFFSET :offset");
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $results['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $results['currentPage'] = $page;
+    $results['totalPages'] = $totalPages;
+
+    require(TEMPLATE_PATH . "/classrooms/manage_classes.php");
+}
+
+function editClassroom() {
+    global $pdo;
+    $results = ['message' => '', 'pageTitle' => 'Edit Class'];
+
+    if (!isset($_GET['id'])) die("No class ID given.");
+    $classId = (int)$_GET['id'];
+
+    $class = Classroom::getById($pdo, $classId);
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $class_name = trim($_POST['class_name'] ?? '');
+        if (Classroom::update($pdo, $classId, $class_name)) {
+            $results['message'] = "Class updated successfully!";
+        } else {
+            $results['message'] = "Error updating class!";
+        }
+        $class = Classroom::getById($pdo, $classId);
+    }
+
+    $results['class'] = $class;
+
+    require(TEMPLATE_PATH . "/classrooms/edit_class.php");
+}
+
+// -------------------------
+// STUDENT MANAGEMENT
+// -------------------------
+function newStudent() {
+    global $pdo;
+    $results = ['message' => '', 'pageTitle' => 'Add New Student', 'classes' => Classroom::getAll($pdo)];
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $name      = trim($_POST['name'] ?? '');
+        $email     = trim($_POST['email'] ?? '');
+        $password  = trim($_POST['password'] ?? '');
+        $roll_no   = trim($_POST['roll_no'] ?? '');
+        $class_id  = (int)($_POST['class_id'] ?? 0);
+        $section   = trim($_POST['section'] ?? '');
+        $phone     = trim($_POST['phone'] ?? '');
+        $status    = trim($_POST['status'] ?? 'Active');
+
+        if (empty($name) || empty($email) || empty($password) || $class_id <= 0) {
+            $results['message'] = "Name, Email, Password, and Class are required!";
+        } else {
+            if (Student::create($pdo, $name, $email, $password, $roll_no, $class_id, $section, $phone, $status)) {
+                $results['message'] = "Student added successfully!";
+                $name = $email = $password = $roll_no = $section = $phone = '';
+            } else {
+                $results['message'] = "Error adding student!";
+            }
+        }
+    }
+
+    require(TEMPLATE_PATH . "/students/add_student.php");
+}
+
+function manageStudents() {
+    global $pdo;
+    $results = ['message' => '', 'pageTitle' => 'Manage Students', 'students' => [], 'classes' => Classroom::getAll($pdo)];
+
+    // Handle delete
+    if (isset($_GET['delete'])) {
+        $studentId = (int)$_GET['delete'];
+        if (Student::delete($pdo, $studentId)) {
+            $results['message'] = "Student deleted!";
+        } else {
+            $results['message'] = "Error deleting student!";
+        }
+    }
+
+    // Pagination
+    $perPage = 25;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $offset = ($page - 1) * $perPage;
+
+    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM students");
+    $total = (int)$stmtTotal->fetchColumn();
+    $totalPages = ceil($total / $perPage);
+
+    $stmt = $pdo->prepare("
+        SELECT s.*, c.class_name 
+        FROM students s 
+        LEFT JOIN classrooms c ON s.class_id = c.class_id 
+        ORDER BY student_id ASC 
+        LIMIT :limit OFFSET :offset
+    ");
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $results['students'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $results['currentPage'] = $page;
+    $results['totalPages'] = $totalPages;
+
+    require(TEMPLATE_PATH . "/students/manage_students.php");
+}
+
+function editStudent() {
+    global $pdo;
+    $results = ['message' => '', 'pageTitle' => 'Edit Student', 'classes' => Classroom::getAll($pdo)];
+
+    if (!isset($_GET['id'])) die("No student ID given.");
+    $studentId = (int)$_GET['id'];
+
+    $student = Student::getById($pdo, $studentId);
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $name      = trim($_POST['name'] ?? '');
+        $email     = trim($_POST['email'] ?? '');
+        $password  = trim($_POST['password'] ?? '');
+        $roll_no   = trim($_POST['roll_no'] ?? '');
+        $class_id  = (int)($_POST['class_id'] ?? 0);
+        $section   = trim($_POST['section'] ?? '');
+        $phone     = trim($_POST['phone'] ?? '');
+        $status    = trim($_POST['status'] ?? 'Active');
+
+        if (Student::update($pdo, $studentId, $name, $email, $password, $roll_no, $class_id, $section, $phone, $status)) {
+            $results['message'] = "Student updated successfully!";
+        } else {
+            $results['message'] = "Error updating student!";
+        }
+
+        $student = Student::getById($pdo, $studentId);
+    }
+
+    $results['student'] = $student;
+
+    require(TEMPLATE_PATH . "/students/edit_student.php");
 }
