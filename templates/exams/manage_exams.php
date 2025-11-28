@@ -1,9 +1,10 @@
 <?php
 // /templates/exams/manage_exams.php
 // -------------------------
-// Displays all exams with Edit/Delete/Assign Questions/Generate Links/View Results actions
-// Includes pagination and feedback messages
+// Displays all exams with Edit/Delete/View actions
+// Includes pagination (Prev/Next + numbered + Go to page)
 
+// Ensure $results exists
 $results = $results ?? [
     'pageTitle'   => 'Manage Exams',
     'message'     => '',
@@ -68,128 +69,126 @@ $offset      = ($currentPage - 1) * $perPage;
                                 <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
-                                        <th>Exam Title</th>
+                                        <th>Title</th>
+                                        <th>Subjects</th>
                                         <th>Total Questions</th>
-                                        <th>Duration</th>
+                                        <th>Duration (min)</th>
+                                        <th>Start / End</th>
                                         <th>Status</th>
+                                        <th>Exam Link</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (!empty($exams)): ?>
                                         <?php foreach ($exams as $exam): ?>
+                                            <?php
+                                            // Fetch subjects for this exam
+                                            $stmt = $pdo->prepare("
+                                                SELECT s.subject_name 
+                                                FROM exam_question_sources eqs 
+                                                JOIN subjects s ON eqs.subject_id = s.subject_id
+                                                WHERE eqs.exam_id = ?
+                                            ");
+                                            $stmt->execute([$exam['exam_id']]);
+                                            $subject_names = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                                            // Fetch exam link
+                                            $stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
+                                            $stmtLink->execute([$exam['exam_id']]);
+                                            $link = $stmtLink->fetchColumn();
+                                            ?>
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
                                                 <td><?= htmlspecialchars($exam['exam_title']) ?></td>
-                                                <td><?= $exam['total_questions'] ?></td>
-                                                <td><?= $exam['duration_minutes'] ?> min</td>
-                                                <td><?= $exam['status'] ?></td>
+                                                <td><?= !empty($subject_names) ? implode(', ', $subject_names) : '-' ?></td>
+                                                <td><?= htmlspecialchars($exam['total_questions'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($exam['duration_minutes'] ?? '-') ?></td>
                                                 <td>
-                                                    <!-- Edit Exam -->
-                                                    <a class="btn btn-sm btn-warning" 
-                                                       href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?= $exam['exam_id'] ?>">
-                                                       <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
-
-                                                    <!-- Assign Questions -->
-                                                    <a class="btn btn-sm btn-info" 
-                                                       href="<?= BASE_URL ?>/admin.php?action=assignQuestions&id=<?= $exam['exam_id'] ?>">
-                                                       <i class="bi bi-list-check"></i> Assign Questions
-                                                    </a>
-
-                                                    <!-- Generate Exam Links -->
-                                                    <a class="btn btn-sm btn-primary" 
-                                                       href="<?= BASE_URL ?>/admin.php?action=generateLinks&id=<?= $exam['exam_id'] ?>">
-                                                       <i class="bi bi-link-45deg"></i> Generate Links
-                                                    </a>
-
-                                                    <!-- View Exam Results -->
-                                                    <a class="btn btn-sm btn-success" 
-                                                       href="<?= BASE_URL ?>/admin.php?action=viewResults&id=<?= $exam['exam_id'] ?>">
-                                                       <i class="bi bi-bar-chart-line"></i> View Results
-                                                    </a>
-
-                                                    <!-- Delete Exam -->
-                                                    <form method="get" action="<?= BASE_URL ?>/admin.php" style="display:inline-block; margin:0 4px;"
-                                                          onsubmit="return confirm('Are you sure you want to delete this exam?');">
-                                                        <input type="hidden" name="action" value="manageExams">
-                                                        <input type="hidden" name="delete" value="<?= $exam['exam_id'] ?>">
-                                                        <button type="submit" class="btn btn-sm btn-danger">
-                                                            <i class="bi bi-trash"></i> Delete
-                                                        </button>
-                                                    </form>
+                                                    <?= !empty($exam['start_time']) ? htmlspecialchars($exam['start_time']) : '-' ?> /
+                                                    <?= !empty($exam['end_time']) ? htmlspecialchars($exam['end_time']) : '-' ?>
                                                 </td>
+                                                <td><?= ($exam['start_time'] <= date('Y-m-d H:i:s') && $exam['end_time'] >= date('Y-m-d H:i:s')) ? 'Active' : 'Inactive' ?></td>
+                                                <td>
+                                                    <?php if ($link): ?>
+                                                        <a href="<?= BASE_URL ?>/exam.php?link=<?= $link ?>" target="_blank"><?= $link ?></a>
+                                                    <?php else: ?>
+                                                        -
+                                                    <?php endif; ?>
+                                                </td>
+                                               <td>
+    						<a class="btn btn-sm btn-info me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=viewExam&id=<?= $exam['exam_id'] ?>">
+      						 <i class="bi bi-eye"></i> View
+    						</a>
+
+    					       <a class="btn btn-sm btn-warning me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?=$exam['exam_id'] ?>">
+       						<i class="bi bi-pencil-square"></i> Edit
+    						</a>
+
+    						<form method="get" action="<?= BASE_URL ?>/admin.php" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this exam?');">
+        					<input type="hidden" name="action" value="manageExams">
+        					<input type="hidden" name="delete" value="<?= $exam['exam_id'] ?>">
+        					<button type="submit" class="btn btn-sm btn-danger me-1 mb-1">
+            						<i class="bi bi-trash"></i> Delete
+        					</button>
+    						</form>
+
+    						<a class="btn btn-sm btn-success mb-1" href="<?= BASE_URL ?>/admin.php?action=examLinks&id=<?= $exam['exam_id'] ?>">
+       						<i class="bi bi-link-45deg"></i> Links
+    						</a>
+						</td>
+
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="8" class="text-center">No exams found.</td>
+                                            <td colspan="9" class="text-center">No exams found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
 
-                        <!-- Pagination (same as subjects) -->
+                        <!-- Pagination -->
                         <?php if ($totalPages >= 1): ?>
-                            <nav aria-label="Pagination" class="mt-4">
-                                <ul class="pagination justify-content-center align-items-center">
+                        <nav aria-label="Pagination" class="mt-4">
+                            <ul class="pagination justify-content-center align-items-center">
+                                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= max(1, $currentPage - 1) ?>">Prev</a>
+                                </li>
 
-                                    <!-- Prev Button -->
-                                    <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= max(1, $currentPage - 1) ?>">
-                                            <i class="fas fa-angle-left"></i> Prev
-                                        </a>
+                                <?php
+                                $start = max(1, $currentPage - 2);
+                                $end   = min($totalPages, $currentPage + 2);
+                                for ($i = $start; $i <= $end; $i++): ?>
+                                    <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
+                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= $i ?>"><?= $i ?></a>
                                     </li>
+                                <?php endfor; ?>
 
-                                    <!-- Page Numbers -->
-                                    <?php
-                                    $start = max(1, $currentPage - 2);
-                                    $end   = min($totalPages, $currentPage + 2);
-                                    for ($i = $start; $i <= $end; $i++): ?>
-                                        <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
-                                            <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= $i ?>"><?= $i ?></a>
-                                        </li>
-                                    <?php endfor; ?>
+                                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= min($totalPages, $currentPage + 1) ?>">Next</a>
+                                </li>
 
-                                    <!-- Next Button -->
-                                    <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
-                                        <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= min($totalPages, $currentPage + 1) ?>">
-                                            Next <i class="fas fa-angle-right"></i>
-                                        </a>
-                                    </li>
-
-                                    <!-- Go To Page -->
-                                    <li class="page-item ms-3">
-                                        <form method="get" action="<?= BASE_URL ?>/admin.php" class="form-inline">
-                                            <input type="hidden" name="action" value="manageExams">
-                                            <label for="gotoPage" class="mr-2 mb-0">Go to:</label>
-                                            <input type="number" min="1" max="<?= $totalPages ?>" name="page" id="gotoPage" class="form-control form-control-sm mr-2" style="width:70px"
-                                                value="<?= $currentPage ?>">
-                                            <button type="submit" class="btn btn-sm btn-primary">Go</button>
-                                        </form>
-                                    </li>
-
-                                </ul>
-                            </nav>
+                                <li class="page-item ms-3">
+                                    <form method="get" action="<?= BASE_URL ?>/admin.php" class="form-inline">
+                                        <input type="hidden" name="action" value="manageExams">
+                                        <input type="number" min="1" max="<?= $totalPages ?>" name="page" class="form-control form-control-sm" style="width:70px" value="<?= $currentPage ?>">
+                                        <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </nav>
                         <?php endif; ?>
 
                     </div>
                 </div>
-                <!-- End of Exams Table Card -->
 
             </div>
-            <!-- /.container-fluid -->
 
         </div>
-        <!-- End of Main Content -->
 
         <!-- Footer -->
         <?php include __DIR__ . "/../include/footer.php"; ?>
-        <!-- End of Footer -->
-
     </div>
-    <!-- End of Content Wrapper -->
-
 </div>
-<!-- End of Page Wrapper -->

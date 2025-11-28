@@ -12,10 +12,6 @@ require_once __DIR__ . "/classes/Subject.php";
 require_once __DIR__ . "/classes/QuestionBank.php";
 require_once __DIR__ . "/classes/Question.php";
 require_once __DIR__ . "/classes/Exam.php";
-require_once __DIR__ . "/classes/ExamQuestion.php";
-require_once __DIR__ . "/classes/ExamLink.php";
-require_once __DIR__ . "/classes/ExamResult.php";
-require_once __DIR__ . "/classes/ExamQuestionSource.php";
 
 //  AUTO-LOGIN USING REMEMBER ME COOKIE
 if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_admin'])) {
@@ -87,8 +83,8 @@ case 'editSubject':
         break;
 
 //EXAM MODULE ROUTES
-    case 'newExam':
-        newExam();
+     case 'newExam':
+        newExam(); 
         break;
 
     case 'manageExams':
@@ -517,90 +513,134 @@ function editQuestion() {
 // -------------------------
 // EXAM MANAGEMENT
 // -------------------------
+// Add Exam Controller
 
 function newExam() {
     global $pdo;
-    
-    // Prepare results array for template
-    $results = [
-        'message'   => '',
-        'pageTitle' => 'Add New Exam',
-        'subjects'  => Subject::getAll($pdo)   // All subjects for multi-select
-    ];
+    $results = ['message' => '', 'pageTitle' => 'Add New Exam'];
+
+    $results['subjects'] = Exam::getAllSubjects($pdo);
+    $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
+    $results['exam_question_sources'] = $_POST['exam_question_sources'] ?? [];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $exam_title       = trim($_POST['exam_title'] ?? '');
+        $exam_description = trim($_POST['exam_description'] ?? '');
+        $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
+        $shuffle_questions = isset($_POST['shuffle_questions']) ? 1 : 0;
+        $shuffle_options   = isset($_POST['shuffle_options']) ? 1 : 0;
+        $negative_marking  = (float)($_POST['negative_marking'] ?? 0);
+        $start_time        = $_POST['start_time'] ?? null;
+        $end_time          = $_POST['end_time'] ?? null;
+        $assign_type       = $_POST['assign_type'] ?? 'class';
+        $assign_data       = $_POST['assign_data'] ?? [];
+        $exam_question_sources = $_POST['exam_question_sources'] ?? [];
 
-        // Collect exam basic data
-        $data = [
-            'exam_title'       => trim($_POST['exam_title'] ?? ''),
-            'exam_description' => trim($_POST['exam_description'] ?? ''),
-            'total_questions'  => (int)($_POST['total_questions'] ?? 0),
-            'duration_minutes' => (int)($_POST['duration_minutes'] ?? 30),
-            'shuffle_questions'=> isset($_POST['shuffle_questions']) ? 1 : 0,
-            'shuffle_options'  => isset($_POST['shuffle_options']) ? 1 : 0,
-            'start_time'       => $_POST['start_time'] ?? null,
-            'end_time'         => $_POST['end_time'] ?? null,
-            'passing_marks'    => (float)($_POST['passing_marks'] ?? 0),
-            'negative_marking' => (float)($_POST['negative_marking'] ?? 0),
-            'status'           => $_POST['status'] ?? 'Inactive'
-        ];
-
-        // Validate exam title
-        if (empty($data['exam_title'])) {
-            $results['message'] = " Exam title is required!";
-        } else {
-            // Create exam
-            $examId = Exam::create($pdo, $data);
-            if ($examId) {
-
-                // Get multi-select inputs
-                $subjectIds = $_POST['subject_ids'] ?? [];
-                $easyPct    = (int)($_POST['easy_percent'] ?? 30);
-                $mediumPct  = (int)($_POST['medium_percent'] ?? 50);
-                $hardPct    = (int)($_POST['hard_percent'] ?? 20);
-
-                // Create exam_question_sources entries for each subject & difficulty
-                foreach ($subjectIds as $subjectId) {
-                    ExamQuestionSource::add($pdo, $examId, null, $subjectId, 'Easy', null);
-                    ExamQuestionSource::add($pdo, $examId, null, $subjectId, 'Medium', null);
-                    ExamQuestionSource::add($pdo, $examId, null, $subjectId, 'Hard', null);
-                }
-
-                $results['message'] = " Exam added successfully!";
-            } else {
-                $results['message'] = " Error adding exam!";
+        $total_questions = 0;
+        foreach ($exam_question_sources as $bank_id => $subjects) {
+            foreach ($subjects as $subject_id => $limit) {
+                $limit = (int)$limit;
+                if ($limit > 0) $total_questions += $limit;
             }
         }
+
+        if (empty($exam_title)) {
+            $results['message'] = "Exam title is required!";
+        } elseif ($total_questions <= 0) {
+            $results['message'] = "You must select at least one question!";
+        } else {
+            // CREATE exam
+            $exam_id = Exam::create($pdo, [
+                'exam_title' => $exam_title,
+                'exam_description' => $exam_description,
+                'duration_minutes' => $duration_minutes,
+                'total_questions' => $total_questions,
+                'shuffle_questions'=> $shuffle_questions,
+                'shuffle_options'  => $shuffle_options,
+                'negative_marking' => $negative_marking,
+                'start_time' => $start_time,
+                'end_time'   => $end_time,
+                'assign_type'=> $assign_type,
+                'assign_data'=> $assign_data
+            ]);
+
+            if ($exam_id) {
+                // Insert question sources
+                $stmtSource = $pdo->prepare("
+                    INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit) 
+                    VALUES (?, ?, ?, ?)
+                ");
+                foreach ($exam_question_sources as $bank_id => $subjects) {
+                    foreach ($subjects as $subject_id => $limit) {
+                        $stmtSource->execute([$exam_id, $bank_id, $subject_id, (int)$limit]);
+                    }
+                }
+
+                // Generate exam questions
+                Exam::generateQuestions($pdo, $exam_id);
+
+                // Generate unique exam link automatically
+                $link = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
+                $password = $_POST['exam_password'] ?? '';
+                $expires_at = $_POST['expires_at'] ?? null;
+                Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
+
+                $results['message'] = "Exam created successfully! Total Questions: $total_questions";
+            } else {
+                $results['message'] = "Error creating exam!";
+            }
+        }
+
+        // Preserve form values
+        $results['exam_title']       = $exam_title;
+        $results['exam_description'] = $exam_description;
+        $results['duration_minutes'] = $duration_minutes;
+        $results['shuffle_questions']= $shuffle_questions;
+        $results['shuffle_options']  = $shuffle_options;
+        $results['negative_marking'] = $negative_marking;
+        $results['start_time']       = $start_time;
+        $results['end_time']         = $end_time;
+        $results['exam_link']        = $link ?? '';
+        $results['expires_at']       = $expires_at ?? '';
     }
 
     require(TEMPLATE_PATH . "/exams/add_exam.php");
 }
 
-
+// Manage exam
 function manageExams() {
     global $pdo;
     $results = [
-        'message' => '',
+        'message'   => '',
         'pageTitle' => 'Manage Exams',
-        'exams' => []
+        'exams'     => [],
     ];
 
+    // Handle delete request
     if (isset($_GET['delete'])) {
         $examId = (int)$_GET['delete'];
-        $results['message'] = Exam::delete($pdo, $examId) ? " Exam deleted!" : " Error deleting exam!";
+        if (Exam::delete($pdo, $examId)) {
+            $results['message'] = "Exam deleted successfully!";
+        } else {
+            $results['message'] = "Error deleting exam!";
+        }
     }
 
-    $perPage = 20;
-    $page = max(1, (int)($_GET['page'] ?? 1));
+    // Pagination
+    $perPage = 25;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $offset = ($page - 1) * $perPage;
 
+    // Total exams
     $stmtTotal = $pdo->query("SELECT COUNT(*) FROM exams");
     $total = (int)$stmtTotal->fetchColumn();
     $totalPages = ceil($total / $perPage);
 
+    // Fetch exams for current page
     $stmt = $pdo->prepare("
-        SELECT * FROM exams
-        ORDER BY exam_id DESC
+        SELECT *
+        FROM exams
+        ORDER BY created_at DESC
         LIMIT :limit OFFSET :offset
     ");
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
@@ -610,208 +650,123 @@ function manageExams() {
 
     $results['currentPage'] = $page;
     $results['totalPages']  = $totalPages;
+    $results['total']       = $total;
+    $results['perPage']     = $perPage;
 
     require(TEMPLATE_PATH . "/exams/manage_exams.php");
 }
 
-// Edit Exam function
-
 function editExam() {
     global $pdo;
+    $exam_id = (int)($_GET['id'] ?? 0);
+    $results = ['message'=>'', 'pageTitle'=>'Edit Exam'];
 
-    // Ensure exam ID is provided
-    if (!isset($_GET['id'])) die("No exam ID given.");
-    $examId = (int)$_GET['id'];
+    // Fetch exam info
+    $exam = Exam::getById($pdo, $exam_id);
+    if (!$exam) {
+        $results['message'] = "Exam not found!";
+        require(TEMPLATE_PATH."/exams/edit_exam.php");
+        return;
+    }
 
-    // Fetch exam
-    $exam = Exam::getById($pdo, $examId);
-    if (!$exam) die("Exam not found!");
+    $results['subjects'] = Exam::getAllSubjects($pdo);
+    $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
 
-    // Prepare data for template
-    $results = [
-        'message'   => '',
-        'pageTitle' => 'Edit Exam',
-        'subjects'  => Subject::getAll($pdo),  // Load all subjects for possible use
-        'exam'      => $exam
-    ];
+    // Load question sources and prepare array like in add_exam
+    $sources = Exam::getQuestionSources($pdo, $exam_id);
+    $exam_question_sources = [];
+    $total_questions = 0;
 
-    // Handle form submission
+    foreach ($sources as $src) {
+        $bank_id = $src['bank_id'];
+        $subject_id = $src['subject_id'];
+        $limit = (int)($src['question_limit'] ?? 0);
+
+        $exam_question_sources[$bank_id][$subject_id] = $limit;
+        $total_questions += $limit;
+    }
+
+    $results['exam_question_sources'] = $exam_question_sources;
+    $results['total_questions'] = $total_questions;
+
+    // Load exam link info
+    $stmtLink = $pdo->prepare("SELECT * FROM exam_links WHERE exam_id=? LIMIT 1");
+    $stmtLink->execute([$exam_id]);
+    $linkInfo = $stmtLink->fetch(PDO::FETCH_ASSOC);
+    $results['exam_link'] = $linkInfo['unique_link'] ?? '';
+    $results['expires_at'] = $linkInfo['expires_at'] ?? '';
+
+    // Load exam details into $results (like add form)
+    foreach ($exam as $key=>$val) $results[$key] = $val;
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $data = [
-            'exam_title'       => trim($_POST['exam_title'] ?? ''),
-            'exam_description' => trim($_POST['exam_description'] ?? ''),
-            'total_questions'  => (int)($_POST['total_questions'] ?? 0),
-            'duration_minutes' => (int)($_POST['duration_minutes'] ?? 30),
-            'shuffle_questions'=> isset($_POST['shuffle_questions']) ? 1 : 0,
-            'shuffle_options'  => isset($_POST['shuffle_options']) ? 1 : 0,
-            'start_time'       => $_POST['start_time'] ?? null,
-            'end_time'         => $_POST['end_time'] ?? null,
-            'passing_marks'    => (float)($_POST['passing_marks'] ?? 0),
-            'negative_marking' => (float)($_POST['negative_marking'] ?? 0),
-            'status'           => $_POST['status'] ?? 'Inactive'
-        ];
+        $exam_title       = trim($_POST['exam_title'] ?? '');
+        $exam_description = trim($_POST['exam_description'] ?? '');
+        $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
+        $shuffle_questions= isset($_POST['shuffle_questions']) ? 1 : 0;
+        $shuffle_options  = isset($_POST['shuffle_options']) ? 1 : 0;
+        $negative_marking = (float)($_POST['negative_marking'] ?? 0);
+        $start_time       = $_POST['start_time'] ?? null;
+        $end_time         = $_POST['end_time'] ?? null;
+        $assign_type      = $_POST['assign_type'] ?? 'class';
+        $assign_data      = $_POST['assign_data'] ?? [];
+        $exam_question_sources = $_POST['exam_question_sources'] ?? [];
+
+        // Recalculate total questions
+        $total_questions = 0;
+        foreach ($exam_question_sources as $bank_id => $subjects) {
+            foreach ($subjects as $subject_id => $limit) {
+                $limit = (int)$limit;
+                if ($limit > 0) $total_questions += $limit;
+            }
+        }
 
         // Update exam
-        $success = Exam::update($pdo, $examId, $data);
+        Exam::update($pdo, $exam_id, [
+            'exam_title'=>$exam_title,
+            'exam_description'=>$exam_description,
+            'duration_minutes'=>$duration_minutes,
+            'total_questions'=>$total_questions,
+            'shuffle_questions'=>$shuffle_questions,
+            'shuffle_options'=>$shuffle_options,
+            'negative_marking'=>$negative_marking,
+            'start_time'=>$start_time,
+            'end_time'=>$end_time,
+            'assign_type'=>$assign_type,
+            'assign_data'=>$assign_data
+        ]);
 
-        $results['message'] = $success ? 
-            "Exam updated successfully!" : 
-            "Error updating exam!";
-
-        // Refresh exam data
-        $results['exam'] = Exam::getById($pdo, $examId);
-    }
-
-    // Load edit template
-    require(TEMPLATE_PATH . "/exams/edit_exam.php");
-}
-
-function assignQuestions() {
-    global $pdo;
-
-    // Ensure exam ID is provided
-    if (!isset($_GET['id'])) die("No exam ID given.");
-    $examId = (int)$_GET['id'];
-
-    // Prepare initial results array
-    $results = [
-        'message'  => '',
-        'pageTitle'=> 'Assign Questions to Exam',
-        'questions'=> [],
-        'assigned' => ExamQuestion::getByExam($pdo, $examId),
-        'sources'  => ExamQuestionSource::getByExam($pdo, $examId),
-        'exam'     => Exam::getById($pdo, $examId)
-    ];
-
-    $questions = [];
-
-    // Loop through each source to fetch questions
-    foreach ($results['sources'] as $source) {
-        $query  = "SELECT * FROM questions WHERE 1=1";
-        $params = [];
-
-        // Filter by subject
-        if (!empty($source['subject_id'])) { 
-            $query .= " AND subject_id=?"; 
-            $params[] = $source['subject_id']; 
-        }
-
-        // Filter by difficulty
-        if (!empty($source['difficulty'])) { 
-            $query .= " AND difficulty=?"; 
-            $params[] = $source['difficulty']; 
-        }
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        $allQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Apply question limit if set
-        if (!empty($source['question_limit'])) { 
-            shuffle($allQuestions); 
-            $allQuestions = array_slice($allQuestions, 0, $source['question_limit']); 
-        }
-
-        // Merge without duplicates
-        foreach ($allQuestions as $q) {
-            if (!isset($questions[$q['question_id']])) {
-                $questions[$q['question_id']] = $q;
+        // Update question sources
+        $pdo->prepare("DELETE FROM exam_question_sources WHERE exam_id=?")->execute([$exam_id]);
+        $stmtSource = $pdo->prepare("
+            INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit) 
+            VALUES (?, ?, ?, ?)
+        ");
+        foreach ($exam_question_sources as $bank_id => $subjects) {
+            foreach ($subjects as $subject_id => $limit) {
+                $stmtSource->execute([$exam_id, $bank_id, $subject_id, (int)$limit]);
             }
         }
-    }
 
-    // Convert associative array back to indexed array
-    $results['questions'] = array_values($questions);
+        // Regenerate exam questions
+        Exam::generateQuestions($pdo, $exam_id);
 
-    // Handle POST request for assignment
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Remove all previous assignments
-        ExamQuestion::removeAllByExam($pdo, $examId);
-
-        if (isset($_POST['auto_select'])) {
-            // Auto-select random questions
-            $totalQuestions = (int)($_POST['total_questions'] ?? $results['exam']['total_questions']);
-            shuffle($results['questions']);
-            $selectedQuestions = array_slice($results['questions'], 0, $totalQuestions);
-
-            foreach ($selectedQuestions as $q) { 
-                ExamQuestion::add($pdo, $examId, $q['question_id']); 
-            }
-            $results['message'] = "Questions assigned automatically!";
+        // Update exam link password and expiration
+        $password = $_POST['exam_password'] ?? '';
+        $expires_at = $_POST['expires_at'] ?? null;
+        if ($linkInfo) {
+            $stmt = $pdo->prepare("UPDATE exam_links SET password=?, expires_at=? WHERE exam_id=?");
+            $stmt->execute([$password ? password_hash($password,PASSWORD_DEFAULT):$linkInfo['password'], $expires_at, $exam_id]);
         } else {
-            // Manual selection
-            foreach ($_POST['question_ids'] ?? [] as $qId) { 
-                ExamQuestion::add($pdo, $examId, (int)$qId); 
-            }
-            $results['message'] = "Questions assigned manually!";
+            // create new link if missing
+            $link = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
+            Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
         }
 
-        // Refresh assigned questions
-        $results['assigned'] = ExamQuestion::getByExam($pdo, $examId);
+        $results['message'] = "Exam updated successfully!";
+        $results['exam_link'] = $linkInfo['unique_link'] ?? $link ?? '';
+        $results['total_questions'] = $total_questions;
     }
 
-    require(TEMPLATE_PATH . "/exams/assign_questions.php");
-}
-
-function generateLinks() {
-    global $pdo;
-
-    $examId = isset($_GET['id']) ? (int)$_GET['id'] : null;
-
-    $results = [
-        'message'   => '',
-        'pageTitle' => 'Generate Exam Links',
-        'exams'     => Exam::getAll($pdo), // all exams for dropdown
-        'links'     => []
-    ];
-
-    if ($examId) {
-        $results['exam']  = Exam::getById($pdo, $examId);
-        $results['links'] = ExamLink::getByExam($pdo, $examId);
-    }
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $examId = (int)($_POST['exam_id'] ?? 0);
-        $unique_link = ExamLink::create(
-            $pdo,
-            $examId,
-            trim($_POST['student_name'] ?? null),
-            trim($_POST['student_email'] ?? null),
-            trim($_POST['student_class'] ?? null),
-            trim($_POST['password'] ?? null),
-            $_POST['expires_at'] ?? null
-        );
-
-        $results['message'] = $unique_link ? "Link generated successfully!" : "Error generating link!";
-        $results['links']   = ExamLink::getByExam($pdo, $examId);
-    }
-
-    require(TEMPLATE_PATH . "/exams/generate_links.php");
-}
-
-
-
-// -------------------------
-// VIEW EXAM RESULTS
-// -------------------------
-function viewResults() {
-    global $pdo;
-    if (!isset($_GET['id'])) die(" No exam ID given.");
-    $examId = (int)$_GET['id'];
-
-    $stmt = $pdo->prepare("
-        SELECT er.*, el.student_name, el.student_email, el.student_class
-        FROM exam_results er
-        JOIN exam_links el ON er.link_id = el.link_id
-        WHERE er.exam_id=?
-        ORDER BY er.submitted_at DESC
-    ");
-    $stmt->execute([$examId]);
-    $results = [
-        'message'   => '',
-        'pageTitle' => 'View Exam Results',
-        'results'   => $stmt->fetchAll(PDO::FETCH_ASSOC)
-    ];
-
-    require(TEMPLATE_PATH . "/exams/view_results.php");
+    require(TEMPLATE_PATH . "/exams/edit_exam.php");
 }
