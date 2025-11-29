@@ -537,70 +537,92 @@ function newExam() {
     global $pdo;
     $results = ['message' => '', 'pageTitle' => 'Add New Exam'];
 
+    // Load dropdown data
     $results['subjects'] = Exam::getAllSubjects($pdo);
     $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
+    $results['classes']  = Exam::getAllClasses($pdo);
+    $results['students'] = Exam::getAllStudents($pdo);
     $results['exam_question_sources'] = $_POST['exam_question_sources'] ?? [];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $exam_title       = trim($_POST['exam_title'] ?? '');
-        $exam_description = trim($_POST['exam_description'] ?? '');
-        $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
-        $shuffle_questions = isset($_POST['shuffle_questions']) ? 1 : 0;
-        $shuffle_options   = isset($_POST['shuffle_options']) ? 1 : 0;
-        $negative_marking  = (float)($_POST['negative_marking'] ?? 0);
-        $start_time        = $_POST['start_time'] ?? null;
-        $end_time          = $_POST['end_time'] ?? null;
-        $assign_type       = $_POST['assign_type'] ?? 'class';
-        $assign_data       = $_POST['assign_data'] ?? [];
+
+        // Basic Fields
+        $exam_title         = trim($_POST['exam_title'] ?? '');
+        $exam_description   = trim($_POST['exam_description'] ?? '');
+        $duration_minutes   = (int)($_POST['duration_minutes'] ?? 30);
+
+        // Settings
+        $shuffle_questions  = isset($_POST['shuffle_questions']) ? 1 : 0;
+        $shuffle_options    = isset($_POST['shuffle_options']) ? 1 : 0;
+        $negative_marking   = (float)($_POST['negative_marking'] ?? 0);
+
+        // Timings
+        $start_time         = $_POST['start_time'] ?? null;
+        $end_time           = $_POST['end_time'] ?? null;
+
+        // Assignment
+        $assign_type        = $_POST['assign_type'] ?? 'class';
+        $assign_data        = $_POST['assign_data'] ?? [];
+
+        // Question Sources
         $exam_question_sources = $_POST['exam_question_sources'] ?? [];
 
+        // Calculate total questions
         $total_questions = 0;
         foreach ($exam_question_sources as $bank_id => $subjects) {
             foreach ($subjects as $subject_id => $limit) {
                 $limit = (int)$limit;
-                if ($limit > 0) $total_questions += $limit;
+                if ($limit > 0) {
+                    $total_questions += $limit;
+                }
             }
         }
 
+        // Validations
         if (empty($exam_title)) {
             $results['message'] = "Exam title is required!";
         } elseif ($total_questions <= 0) {
             $results['message'] = "You must select at least one question!";
         } else {
-            // CREATE exam
+
+            // CREATE EXAM
             $exam_id = Exam::create($pdo, [
-                'exam_title' => $exam_title,
-                'exam_description' => $exam_description,
-                'duration_minutes' => $duration_minutes,
-                'total_questions' => $total_questions,
-                'shuffle_questions'=> $shuffle_questions,
-                'shuffle_options'  => $shuffle_options,
-                'negative_marking' => $negative_marking,
-                'start_time' => $start_time,
-                'end_time'   => $end_time,
-                'assign_type'=> $assign_type,
-                'assign_data'=> $assign_data
+                'exam_title'        => $exam_title,
+                'exam_description'  => $exam_description,
+                'duration_minutes'  => $duration_minutes,
+                'total_questions'   => $total_questions,
+                'shuffle_questions' => $shuffle_questions,
+                'shuffle_options'   => $shuffle_options,
+                'negative_marking'  => $negative_marking,
+                'start_time'        => $start_time,
+                'end_time'          => $end_time,
+                'assign_type'       => $assign_type,
+                'assign_data'       => $assign_data   
             ]);
 
             if ($exam_id) {
+
                 // Insert question sources
                 $stmtSource = $pdo->prepare("
-                    INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit) 
+                    INSERT INTO exam_question_sources 
+                    (exam_id, bank_id, subject_id, question_limit) 
                     VALUES (?, ?, ?, ?)
                 ");
+
                 foreach ($exam_question_sources as $bank_id => $subjects) {
                     foreach ($subjects as $subject_id => $limit) {
                         $stmtSource->execute([$exam_id, $bank_id, $subject_id, (int)$limit]);
                     }
                 }
 
-                // Generate exam questions
+                // Auto-generate exam questions
                 Exam::generateQuestions($pdo, $exam_id);
 
-                // Generate unique exam link automatically
-                $link = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
-                $password = $_POST['exam_password'] ?? '';
+                // Auto-generate exam link
+                $link       = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
+                $password   = $_POST['exam_password'] ?? '';
                 $expires_at = $_POST['expires_at'] ?? null;
+
                 Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
 
                 $results['message'] = "Exam created successfully! Total Questions: $total_questions";
@@ -609,17 +631,17 @@ function newExam() {
             }
         }
 
-        // Preserve form values
-        $results['exam_title']       = $exam_title;
-        $results['exam_description'] = $exam_description;
-        $results['duration_minutes'] = $duration_minutes;
-        $results['shuffle_questions']= $shuffle_questions;
-        $results['shuffle_options']  = $shuffle_options;
-        $results['negative_marking'] = $negative_marking;
-        $results['start_time']       = $start_time;
-        $results['end_time']         = $end_time;
-        $results['exam_link']        = $link ?? '';
-        $results['expires_at']       = $expires_at ?? '';
+        // Preserve field values
+        $results['exam_title']        = $exam_title;
+        $results['exam_description']  = $exam_description;
+        $results['duration_minutes']  = $duration_minutes;
+        $results['shuffle_questions'] = $shuffle_questions;
+        $results['shuffle_options']   = $shuffle_options;
+        $results['negative_marking']  = $negative_marking;
+        $results['start_time']        = $start_time;
+        $results['end_time']          = $end_time;
+        $results['exam_link']         = $link ?? '';
+        $results['expires_at']        = $expires_at ?? '';
     }
 
     require(TEMPLATE_PATH . "/exams/add_exam.php");
@@ -689,7 +711,8 @@ function editExam() {
 
     $results['subjects'] = Exam::getAllSubjects($pdo);
     $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
-
+    $results['classes']  = Exam::getAllClasses($pdo);
+    $results['students'] = Exam::getAllStudents($pdo);
     // Load question sources and prepare array like in add_exam
     $sources = Exam::getQuestionSources($pdo, $exam_id);
     $exam_question_sources = [];
