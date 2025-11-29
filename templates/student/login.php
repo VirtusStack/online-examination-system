@@ -19,8 +19,8 @@ require_once __DIR__ . '/../../config/config.php';
             <div class="card o-hidden border-0 shadow-lg my-5">
                 <div class="card-body p-5">
                     <!-- Login Form -->
-                  <form method="POST" action="<?= BASE_URL ?>student.php?action=login">
-
+                  <form action="<?= BASE_URL ?>/student.php?action=login" method="post">
+ 
                         <div class="text-center mb-4">
                             <h1 class="h4 text-gray-900">Student Login</h1>
                             <p class="text-muted">Enter your credentials to continue</p>
