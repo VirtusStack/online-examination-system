@@ -125,6 +125,18 @@ class Exam {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+// Fetch all classes
+public static function getAllClasses($pdo) {
+    $stmt = $pdo->query("SELECT class_id, class_name FROM classrooms ORDER BY class_name ASC");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Fetch all students
+public static function getAllStudents($pdo) {
+    $stmt = $pdo->query("SELECT student_id, name, email FROM students ORDER BY name ASC");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+    
     // Assign students to exam
     public static function assignStudents($pdo, $exam_id, $type, $data) {
         $exam_id = (int)$exam_id;
@@ -189,6 +201,110 @@ class Exam {
                 $stmtInsert->execute([$exam_id, $question_id]);
             }
         }
+    }
+
+     // Fetch exam details for a specific student 
+     public static function getExamForStudent($pdo, $exam_id, $student_id = 0) {
+    try {
+        $student_id = $student_id ?: ($_SESSION['student_id'] ?? 0);
+
+        if (!$student_id) return false;
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.*, 
+                e.duration_minutes AS duration,
+                e.start_time AS exam_date,
+                (
+                    SELECT s.subject_name 
+                    FROM exam_question_sources eqs
+                    JOIN subjects s ON s.subject_id = eqs.subject_id
+                    WHERE eqs.exam_id = e.exam_id
+                    LIMIT 1
+                ) AS subject_name
+            FROM exams e
+            JOIN exam_assigned_students eas 
+                ON e.exam_id = eas.exam_id
+            WHERE e.exam_id = ? AND eas.student_id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$exam_id, $student_id]);
+        $exam = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Fallbacks to avoid undefined array keys
+        $exam['subject_name'] = $exam['subject_name'] ?? 'N/A';
+        $exam['duration'] = $exam['duration'] ?? 0;
+        $exam['exam_date'] = $exam['exam_date'] ?? date('Y-m-d H:i:s');
+
+        return $exam;
+
+      } catch (PDOException $e) {
+        error_log("getExamForStudent failed: " . $e->getMessage());
+        return false;
+       }
+     }
+
+   // Get exam questions WITH options
+   public static function getExamQuestions($examId)
+{
+    global $pdo;
+
+    $sql = "SELECT q.question_id, q.question_text, 
+                q.option_a, q.option_b, q.option_c, q.option_d,
+                q.correct_option, q.marks_per_question
+            FROM exam_questions eq
+            INNER JOIN questions q ON eq.question_id = q.question_id
+            WHERE eq.exam_id = ?
+            ORDER BY eq.id ASC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$examId]);
+
+    $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Convert options into an array
+    foreach ($questions as &$q) {
+        $q['options'] = [
+            'A' => $q['option_a'],
+            'B' => $q['option_b'],
+            'C' => $q['option_c'],
+            'D' => $q['option_d'],
+        ];
+    }
+
+    return $questions;
+}
+
+
+    public static function getAssignedExams($pdo, $student_id) {
+        try {
+           $stmt = $pdo->prepare("
+              SELECT 
+                e.exam_id,
+                e.exam_title,
+                e.duration_minutes AS duration,
+                e.total_questions,
+                e.start_time,
+                e.end_time,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT s.subject_name SEPARATOR ', ')
+                    FROM exam_question_sources eqs
+                    JOIN subjects s ON s.subject_id = eqs.subject_id
+                    WHERE eqs.exam_id = e.exam_id
+                ) AS subjects
+            FROM exams e
+            JOIN exam_assigned_students eas 
+                ON eas.exam_id = e.exam_id
+            WHERE eas.student_id = ?
+            ORDER BY e.start_time ASC
+        ");
+        $stmt->execute([$student_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Get assigned exams failed: " . $e->getMessage());
+        return [];
+       }
     }
 
     // Get assigned students
