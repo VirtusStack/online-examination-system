@@ -1,7 +1,9 @@
 <?php
 // /templates/exams/add_exam.php
 // ---------------------------------
-// View file: Add Exam 
+// View file: Add Exam
+// Includes Assign Students functionality (Class, Individual)
+// Uses SB Admin 2 layout
 
 require_once __DIR__ . '/../../config/config.php';
 include __DIR__ . "/../include/header.php";
@@ -10,6 +12,8 @@ include __DIR__ . "/../include/header.php";
 $results['subjects'] = $results['subjects'] ?? [];
 $results['question_banks'] = $results['question_banks'] ?? [];
 $results['exam_question_sources'] = $results['exam_question_sources'] ?? [];
+$results['classes'] = $results['classes'] ?? [];
+$results['students'] = $results['students'] ?? [];
 ?>
 
 <div id="wrapper">
@@ -99,15 +103,6 @@ $results['exam_question_sources'] = $results['exam_question_sources'] ?? [];
                                 </select>
                             </div>
 
-                            <!-- Exam Rules Page -->
-                            <div class="form-group mb-3">
-                                <label>Show Rules Page Before Start:</label>
-                                <select name="rules_page" class="form-control">
-                                    <option value="1" <?= (isset($results['rules_page']) && $results['rules_page']==1)?'selected':'' ?>>Yes</option>
-                                    <option value="0" <?= (isset($results['rules_page']) && $results['rules_page']==0)?'selected':'' ?>>No</option>
-                                </select>
-                            </div>
-
                             <!-- Question Sources -->
                             <div class="form-group mb-3">
                                 <label>Select Question Bank & Subject:</label>
@@ -129,21 +124,41 @@ $results['exam_question_sources'] = $results['exam_question_sources'] ?? [];
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Assign Students -->
-                            <div class="form-group mb-3">
-                                <label>Assign Exam To:</label>
-                                <select name="assign_type" class="form-control">
-                                    <option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
-                                    <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
-                                    <option value="group" <?= (isset($results['assign_type']) && $results['assign_type']=='group')?'selected':'' ?>>Group / Section</option>
-                                </select>
-                            </div>
+                        <!-- Assign Students -->
+			<div class="form-group mb-3">
+    			   <label>Assign Exam To:</label>
+                	   <select name="assign_type" id="assignType" class="form-control">
+        			<option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
+       			        <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
+    			</select>
+		     </div>
 
-                            <!-- Exam Link -->
+		         <!-- Classes Dropdown -->
+		         <div class="form-group mb-3" id="classSelect" style="display: none;">
+    		             <label>Select Class:</label>
+    		             <select name="assign_data[class_id]" class="form-control">
+        	                <?php foreach ($results['classes'] as $cls): ?>
+            	                <option value="<?= $cls['class_id'] ?>"><?= htmlspecialchars($cls['class_name']) ?></option>
+        		         <?php endforeach; ?>
+    		              </select>
+		         </div>
+
+		 	<!-- Students Dropdown -->
+			<div class="form-group mb-3" id="studentSelect" style="display: none;">
+    		   	     <label>Select Students:</label>
+    		             <select name="assign_data[student_ids][]" class="form-control" multiple>
+        			<?php foreach ($results['students'] as $stu): ?>
+            			<option value="<?= $stu['student_id'] ?>"><?= htmlspecialchars($stu['name']) ?> (<?= $stu['email'] ?>)</option>
+        			<?php endforeach; ?>
+    		   	     </select>
+    		  	    <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
+	        	</div>
+
+                            <!-- Exam Link & Password -->
                             <div class="form-group mb-3">
                                 <label>Online Exam Link:</label>
                                 <input type="text" name="exam_link" class="form-control" readonly value="<?= htmlspecialchars($results['exam_link'] ?? '') ?>">
-                                <small class="form-text text-muted">This link is required. Students will open the exam via this link.</small>
+                                <small class="form-text text-muted">Students will access exam via this link.</small>
                                 <input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password" required>
                                 <input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
                             </div>
@@ -162,3 +177,19 @@ $results['exam_question_sources'] = $results['exam_question_sources'] ?? [];
         <?php include __DIR__ . "/../include/footer.php"; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const assignType = document.getElementById('assignType');
+    const classSelect = document.getElementById('classSelect');
+    const studentSelect = document.getElementById('studentSelect');
+   
+    function toggleAssignFields() {
+        classSelect.style.display = assignType.value === 'class' ? 'block' : 'none';
+        studentSelect.style.display = assignType.value === 'individual' ? 'block' : 'none';
+    }
+
+    assignType.addEventListener('change', toggleAssignFields);
+    toggleAssignFields(); // initial call
+});
+</script>

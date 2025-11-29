@@ -108,7 +108,38 @@ include __DIR__ . "/../include/header.php";
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endforeach; ?>
+                            </div
+
+			    <!-- Assign Exam To -->
+                            <div class="form-group mb-3">
+                                <label>Assign Exam To:</label>
+                                <select name="assign_type" id="assignType" class="form-control">
+                                    <option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
+                                    <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
+                                </select>
                             </div>
+			
+		         <!-- Classes Dropdown -->
+		         <div class="form-group mb-3" id="classSelect" style="display: none;">
+    		             <label>Select Class:</label>
+    		             <select name="assign_data[class_id]" class="form-control">
+        	                <?php foreach ($results['classes'] as $cls): ?>
+            	                <option value="<?= $cls['class_id'] ?>"><?= htmlspecialchars($cls['class_name']) ?></option>
+        		         <?php endforeach; ?>
+    		              </select>
+		         </div>
+
+		 	<!-- Students Dropdown -->
+			<div class="form-group mb-3" id="studentSelect" style="display: none;">
+    		   	     <label>Select Students:</label>
+    		             <select name="assign_data[student_ids][]" class="form-control" multiple>
+        			<?php foreach ($results['students'] as $stu): ?>
+            			<option value="<?= $stu['student_id'] ?>"><?= htmlspecialchars($stu['name']) ?> (<?= $stu['email'] ?>)</option>
+        			<?php endforeach; ?>
+    		   	     </select>
+    		  	    <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
+	        	</div>
+
 
                             <!-- Exam Link -->
                             <div class="form-group mb-3">
@@ -117,16 +148,6 @@ include __DIR__ . "/../include/header.php";
                                 <small class="form-text text-muted">Students will open the exam via this link.</small>
                                 <input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password">
                                 <input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
-                            </div>
-
-                            <!-- Assign Exam To -->
-                            <div class="form-group mb-3">
-                                <label>Assign Exam To:</label>
-                                <select name="assign_type" class="form-control">
-                                    <option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
-                                    <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
-                                    <option value="group" <?= (isset($results['assign_type']) && $results['assign_type']=='group')?'selected':'' ?>>Group / Section</option>
-                                </select>
                             </div>
 
                             <!-- Submit -->
@@ -143,3 +164,19 @@ include __DIR__ . "/../include/header.php";
         <?php include __DIR__ . "/../include/footer.php"; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const assignType = document.getElementById('assignType');
+    const classSelect = document.getElementById('classSelect');
+    const studentSelect = document.getElementById('studentSelect');
+   
+    function toggleAssignFields() {
+        classSelect.style.display = assignType.value === 'class' ? 'block' : 'none';
+        studentSelect.style.display = assignType.value === 'individual' ? 'block' : 'none';
+    }
+
+    assignType.addEventListener('change', toggleAssignFields);
+    toggleAssignFields(); // initial call
+});
+</script>
