@@ -92,11 +92,6 @@ $offset      = ($currentPage - 1) * $perPage;
                                             ");
                                             $stmt->execute([$exam['exam_id']]);
                                             $subject_names = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-                                            // Fetch exam link
-                                            $stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
-                                            $stmtLink->execute([$exam['exam_id']]);
-                                            $link = $stmtLink->fetchColumn();
                                             ?>
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
@@ -109,13 +104,23 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     <?= !empty($exam['end_time']) ? htmlspecialchars($exam['end_time']) : '-' ?>
                                                 </td>
                                                 <td><?= ($exam['start_time'] <= date('Y-m-d H:i:s') && $exam['end_time'] >= date('Y-m-d H:i:s')) ? 'Active' : 'Inactive' ?></td>
-                                                <td>
-                                                    <?php if ($link): ?>
-                                                        <a href="<?= BASE_URL ?>/exam.php?link=<?= $link ?>" target="_blank"><?= $link ?></a>
-                                                    <?php else: ?>
-                                                        -
-                                                    <?php endif; ?>
-                                                </td>
+                                               <td>
+    						<?php
+        					// Fetch exam link code from DB
+        					$stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
+        					$stmtLink->execute([$exam['exam_id']]);
+        					$linkCode = $stmtLink->fetchColumn();
+
+        					// Build full URL for students
+        					$fullLink = $linkCode ? BASE_URL . "/student.php?action=startExam&link=" . $linkCode : '';
+    						?>
+    						<?php if ($fullLink): ?>
+        					  <a href="<?= htmlspecialchars($fullLink) ?>" target="_blank"><?= htmlspecialchars($fullLink) ?></a>
+    						<?php else: ?>
+      						  -
+    						<?php endif; ?>
+						</td>
+
                                                <td>
     						<a class="btn btn-sm btn-info me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=viewExam&id=<?= $exam['exam_id'] ?>">
       						 <i class="bi bi-eye"></i> View
