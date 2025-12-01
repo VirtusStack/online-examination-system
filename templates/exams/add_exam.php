@@ -154,14 +154,13 @@ $results['students'] = $results['students'] ?? [];
     		  	    <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
 	        	</div>
 
-                            <!-- Exam Link & Password -->
-                            <div class="form-group mb-3">
-                                <label>Online Exam Link:</label>
-                                <input type="text" name="exam_link" class="form-control" readonly value="<?= htmlspecialchars($results['exam_link'] ?? '') ?>">
-                                <small class="form-text text-muted">Students will access exam via this link.</small>
-                                <input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password" required>
-                                <input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
-                            </div>
+                           <div class="form-group mb-3">
+    				<label>Online Exam Link:</label>
+    				<input type="text" name="exam_link" class="form-control" readonly value="<?= htmlspecialchars($results['exam_link'] ?? '') ?>">
+    				<small class="form-text text-muted">Students will access exam via this link.</small>
+    				<input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password" required>
+    				<input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
+				</div>
 
                             <!-- Submit -->
                             <button type="submit" class="btn btn-primary">Add Exam</button>
