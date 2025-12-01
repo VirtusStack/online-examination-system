@@ -615,15 +615,20 @@ function newExam() {
                     }
                 }
 
-                // Auto-generate exam questions
-                Exam::generateQuestions($pdo, $exam_id);
+               // Auto-generate exam link (store only code in DB)
+$link       = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
+$password   = $_POST['exam_password'] ?? '';
+$expires_at = $_POST['expires_at'] ?? null;
 
-                // Auto-generate exam link
-                $link       = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
-                $password   = $_POST['exam_password'] ?? '';
-                $expires_at = $_POST['expires_at'] ?? null;
+// Store link code in DB
+Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
 
-                Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
+// Full URL to show admin (no DB change)
+$fullExamUrl = BASE_URL . "student.php?action=startExam&link=" . $link;
+
+// Show full link in admin template
+$results['exam_link'] = $fullExamUrl;
+
 
                 $results['message'] = "Exam created successfully! Total Questions: $total_questions";
             } else {
@@ -631,7 +636,7 @@ function newExam() {
             }
         }
 
-        // Preserve field values
+        // Preserve form data
         $results['exam_title']        = $exam_title;
         $results['exam_description']  = $exam_description;
         $results['duration_minutes']  = $duration_minutes;
@@ -640,7 +645,6 @@ function newExam() {
         $results['negative_marking']  = $negative_marking;
         $results['start_time']        = $start_time;
         $results['end_time']          = $end_time;
-        $results['exam_link']         = $link ?? '';
         $results['expires_at']        = $expires_at ?? '';
     }
 
@@ -699,21 +703,23 @@ function manageExams() {
 function editExam() {
     global $pdo;
     $exam_id = (int)($_GET['id'] ?? 0);
-    $results = ['message'=>'', 'pageTitle'=>'Edit Exam'];
+    $results = ['message' => '', 'pageTitle' => 'Edit Exam'];
 
     // Fetch exam info
     $exam = Exam::getById($pdo, $exam_id);
     if (!$exam) {
         $results['message'] = "Exam not found!";
-        require(TEMPLATE_PATH."/exams/edit_exam.php");
+        require(TEMPLATE_PATH . "/exams/edit_exam.php");
         return;
     }
 
+    // Load dropdowns
     $results['subjects'] = Exam::getAllSubjects($pdo);
     $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
-    $results['classes']  = Exam::getAllClasses($pdo);
+    $results['classes'] = Exam::getAllClasses($pdo);
     $results['students'] = Exam::getAllStudents($pdo);
-    // Load question sources and prepare array like in add_exam
+
+    // Load question sources
     $sources = Exam::getQuestionSources($pdo, $exam_id);
     $exam_question_sources = [];
     $total_questions = 0;
@@ -734,19 +740,31 @@ function editExam() {
     $stmtLink = $pdo->prepare("SELECT * FROM exam_links WHERE exam_id=? LIMIT 1");
     $stmtLink->execute([$exam_id]);
     $linkInfo = $stmtLink->fetch(PDO::FETCH_ASSOC);
-    $results['exam_link'] = $linkInfo['unique_link'] ?? '';
+
+    // Ensure BASE_URL ends with slash
+    $baseUrl = rtrim(BASE_URL, '/') . '/';
+
+    // Important: FIX EXAM LINK (full URL)
+    if (!empty($linkInfo['unique_link'])) {
+        $results['exam_link'] = $baseUrl . "student.php?action=startExam&link=" . $linkInfo['unique_link'];
+    } else {
+        $results['exam_link'] = ''; // empty if no link yet
+    }
+
     $results['expires_at'] = $linkInfo['expires_at'] ?? '';
 
-    // Load exam details into $results (like add form)
-    foreach ($exam as $key=>$val) $results[$key] = $val;
+    // Load exam details
+    foreach ($exam as $key => $val) $results[$key] = $val;
 
+    // If form submitted
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
         $exam_title       = trim($_POST['exam_title'] ?? '');
         $exam_description = trim($_POST['exam_description'] ?? '');
         $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
-        $shuffle_questions= isset($_POST['shuffle_questions']) ? 1 : 0;
-        $shuffle_options  = isset($_POST['shuffle_options']) ? 1 : 0;
-        $negative_marking = (float)($_POST['negative_marking'] ?? 0);
+        $shuffle_questions = isset($_POST['shuffle_questions']) ? 1 : 0;
+        $shuffle_options   = isset($_POST['shuffle_options']) ? 1 : 0;
+        $negative_marking  = (float)($_POST['negative_marking'] ?? 0);
         $start_time       = $_POST['start_time'] ?? null;
         $end_time         = $_POST['end_time'] ?? null;
         $assign_type      = $_POST['assign_type'] ?? 'class';
@@ -764,25 +782,26 @@ function editExam() {
 
         // Update exam
         Exam::update($pdo, $exam_id, [
-            'exam_title'=>$exam_title,
-            'exam_description'=>$exam_description,
-            'duration_minutes'=>$duration_minutes,
-            'total_questions'=>$total_questions,
-            'shuffle_questions'=>$shuffle_questions,
-            'shuffle_options'=>$shuffle_options,
-            'negative_marking'=>$negative_marking,
-            'start_time'=>$start_time,
-            'end_time'=>$end_time,
-            'assign_type'=>$assign_type,
-            'assign_data'=>$assign_data
+            'exam_title' => $exam_title,
+            'exam_description' => $exam_description,
+            'duration_minutes' => $duration_minutes,
+            'total_questions' => $total_questions,
+            'shuffle_questions' => $shuffle_questions,
+            'shuffle_options' => $shuffle_options,
+            'negative_marking' => $negative_marking,
+            'start_time' => $start_time,
+            'end_time' => $end_time,
+            'assign_type' => $assign_type,
+            'assign_data' => $assign_data
         ]);
 
         // Update question sources
         $pdo->prepare("DELETE FROM exam_question_sources WHERE exam_id=?")->execute([$exam_id]);
         $stmtSource = $pdo->prepare("
-            INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit) 
+            INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit)
             VALUES (?, ?, ?, ?)
         ");
+
         foreach ($exam_question_sources as $bank_id => $subjects) {
             foreach ($subjects as $subject_id => $limit) {
                 $stmtSource->execute([$exam_id, $bank_id, $subject_id, (int)$limit]);
@@ -792,21 +811,29 @@ function editExam() {
         // Regenerate exam questions
         Exam::generateQuestions($pdo, $exam_id);
 
-        // Update exam link password and expiration
+        // Update exam link password + expiry
         $password = $_POST['exam_password'] ?? '';
         $expires_at = $_POST['expires_at'] ?? null;
+
         if ($linkInfo) {
             $stmt = $pdo->prepare("UPDATE exam_links SET password=?, expires_at=? WHERE exam_id=?");
-            $stmt->execute([$password ? password_hash($password,PASSWORD_DEFAULT):$linkInfo['password'], $expires_at, $exam_id]);
+            $stmt->execute([
+                $password ? password_hash($password, PASSWORD_DEFAULT) : $linkInfo['password'],
+                $expires_at,
+                $exam_id
+            ]);
+            $finalLinkCode = $linkInfo['unique_link'];
         } else {
-            // create new link if missing
-            $link = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
-            Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
+            // Generate new link
+            $finalLinkCode = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
+            Exam::createExamLink($pdo, $exam_id, $finalLinkCode, $password, $expires_at);
         }
 
-        $results['message'] = "Exam updated successfully!";
-        $results['exam_link'] = $linkInfo['unique_link'] ?? $link ?? '';
+        // FIX: Send full link to view
+        $results['exam_link'] = $baseUrl . "student.php?action=startExam&link=" . $finalLinkCode;
         $results['total_questions'] = $total_questions;
+
+        $results['message'] = "Exam updated successfully!";
     }
 
     require(TEMPLATE_PATH . "/exams/edit_exam.php");
