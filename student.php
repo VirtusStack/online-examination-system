@@ -155,29 +155,29 @@ function studentDashboard() {
     require(__DIR__ . "/templates/student/dashboard.php");
 }
 
-// Start Exam page
 function startExam() {
     global $pdo;
 
-    $exam_id = intval($_GET['exam_id'] ?? 0);
     $student_id = $_SESSION['student_id'] ?? 0;
+    $exam = null;
 
-    if (!$exam_id || !$student_id) {
-        header("Location: student.php?action=dashboard");
-        exit;
+    // Check if coming via exam_id (dashboard)
+    if (!empty($_GET['exam_id'])) {
+        $exam_id = intval($_GET['exam_id']);
+        $exam = Exam::getExamForStudent($pdo, $exam_id, $student_id);
+    }
+    // Check if coming via link (from unique exam link)
+    elseif (!empty($_GET['link'])) {
+        $link = $_GET['link'];
+        $exam = Exam::getExamByLink($pdo, $link, $student_id); // You'll need this method
     }
 
-    // Fetch exam for this student
-    $exam = Exam::getExamForStudent($pdo, $exam_id, $student_id);
-
     if (!$exam) {
-        // Exam not found or not assigned to student
         $_SESSION['error_message'] = "Exam not available or not assigned to you.";
         header("Location: student.php?action=dashboard");
         exit;
     }
 
-    // Pass exam details to template
     $results = [
         'pageTitle' => 'Start Exam: ' . ($exam['exam_title'] ?? ''),
         'exam' => $exam
