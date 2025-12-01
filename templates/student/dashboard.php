@@ -2,8 +2,8 @@
 // /templates/student/dashboard.php
 // -----------------------------------------------------------
 // Student Dashboard Template
-// Shows welcome message, assigned exams list, profile box
-// Uses student header, sidebar, footer
+// Shows Welcome message + Assigned Exams list
+// Uses student header, sidebar, topbar, footer
 // -----------------------------------------------------------
 
 include __DIR__ . "/header.php";
@@ -23,7 +23,7 @@ include __DIR__ . "/sidebar.php";
 
             <!-- Page Heading -->
             <h1 class="h3 mb-4 text-gray-800">
-                Welcome, <?= htmlspecialchars($results['studentName']) ?> 
+                Welcome, <?= htmlspecialchars($results['studentName']); ?>
             </h1>
 
             <div class="row">
@@ -38,7 +38,7 @@ include __DIR__ . "/sidebar.php";
                                         Student Profile
                                     </div>
                                     <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                        <?= htmlspecialchars($results['studentName']) ?>
+                                        <?= htmlspecialchars($results['studentName']); ?>
                                     </div>
                                     <a href="#" class="mt-2 d-block small text-primary">View Profile</a>
                                 </div>
@@ -82,7 +82,9 @@ include __DIR__ . "/sidebar.php";
                 <div class="card-body">
 
                     <?php if (empty($results['assignedExams'])): ?>
+                        <!-- No exams message -->
                         <div class="alert alert-info">No exams assigned yet.</div>
+
                     <?php else: ?>
 
                         <div class="table-responsive">
@@ -90,7 +92,7 @@ include __DIR__ . "/sidebar.php";
                                 <thead>
                                 <tr>
                                     <th>Exam Name</th>
-                                    <th>Subjects</th>
+                                    <th>Subject</th>
                                     <th>Date</th>
                                     <th>Duration</th>
                                     <th>Total Questions</th>
@@ -99,15 +101,32 @@ include __DIR__ . "/sidebar.php";
                                 </thead>
 
                                 <tbody>
+
                                 <?php foreach ($results['assignedExams'] as $exam): ?>
+
                                     <tr>
-                                        <td><?= htmlspecialchars($exam['exam_title'] ?? 'N/A'); ?></td>
-                                        <td><?= htmlspecialchars($exam['subjects'] ?? 'N/A'); ?></td>
+                                        <!-- Exam Title -->
+                                        <td><?= htmlspecialchars($exam['exam_title']); ?></td>
+
+                                        <!-- Subject -->
+                                        <td><?= htmlspecialchars($exam['subjects']); ?></td>
+
+                                        <!-- Exam Date -->
                                         <td>
-                                            <?= !empty($exam['start_time']) ? date("d M Y", strtotime($exam['start_time'])) : 'N/A'; ?>
+                                            <?= date("d M Y", strtotime($exam['start_time'])); ?>
                                         </td>
-                                        <td><?= $exam['duration'] ?? 0; ?> mins</td>
-                                        <td><?= $exam['total_questions'] ?? 0; ?></td>
+
+                                        <!-- Duration -->
+                                        <td>
+    					 <?= isset($exam['duration_minutes']) 
+        				    ? intval($exam['duration_minutes']) . ' mins' 
+        				   : (isset($exam['duration']) ? intval($exam['duration']). ' mins' : 'N/A'); ?>
+					</td>
+
+                                        <!-- Total Questions -->
+                                        <td><?= intval($exam['total_questions']); ?></td>
+
+                                        <!-- Start Exam Button -->
                                         <td>
                                             <a href="student.php?action=startExam&exam_id=<?= $exam['exam_id']; ?>"
                                                class="btn btn-sm btn-primary">
@@ -115,7 +134,9 @@ include __DIR__ . "/sidebar.php";
                                             </a>
                                         </td>
                                     </tr>
+
                                 <?php endforeach; ?>
+
                                 </tbody>
                             </table>
                         </div>
