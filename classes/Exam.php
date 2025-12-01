@@ -278,26 +278,26 @@ public static function getAllStudents($pdo) {
 
     public static function getAssignedExams($pdo, $student_id) {
         try {
-           $stmt = $pdo->prepare("
-              SELECT 
-                e.exam_id,
-                e.exam_title,
-                e.duration_minutes AS duration,
-                e.total_questions,
-                e.start_time,
-                e.end_time,
-                (
-                    SELECT GROUP_CONCAT(DISTINCT s.subject_name SEPARATOR ', ')
-                    FROM exam_question_sources eqs
-                    JOIN subjects s ON s.subject_id = eqs.subject_id
-                    WHERE eqs.exam_id = e.exam_id
-                ) AS subjects
-            FROM exams e
-            JOIN exam_assigned_students eas 
-                ON eas.exam_id = e.exam_id
-            WHERE eas.student_id = ?
-            ORDER BY e.start_time ASC
-        ");
+          $stmt = $pdo->prepare("
+    SELECT 
+        e.exam_id,
+        e.exam_title,
+        e.duration_minutes,
+        e.total_questions,
+        e.start_time,
+        e.end_time,
+        (
+            SELECT GROUP_CONCAT(DISTINCT s.subject_name SEPARATOR ', ')
+            FROM exam_question_sources eqs
+            JOIN subjects s ON s.subject_id = eqs.subject_id
+            WHERE eqs.exam_id = e.exam_id
+        ) AS subjects
+   	 FROM exams e
+   	 JOIN exam_assigned_students eas 
+        ON eas.exam_id = e.exam_id
+    	WHERE eas.student_id = ?
+         ORDER BY e.start_time ASC
+	");
         $stmt->execute([$student_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -318,6 +318,34 @@ public static function getAllStudents($pdo) {
         $stmt->execute([$exam_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+  // Fetch exam by unique link for a specific student
+public static function getExamByLink($pdo, $link, $student_id = 0) {
+    $student_id = $student_id ?: ($_SESSION['student_id'] ?? 0);
+    if (!$student_id) return false;
+
+    $stmt = $pdo->prepare("
+        SELECT e.* 
+        FROM exams e
+        JOIN exam_links el ON e.exam_id = el.exam_id
+        LEFT JOIN exam_assigned_students eas ON e.exam_id = eas.exam_id
+        WHERE el.unique_link = ? 
+          AND (eas.student_id = ? OR e.assign_type = 'all')
+        LIMIT 1
+    ");
+    $stmt->execute([$link, $student_id]);
+    $exam = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Fallbacks to avoid undefined array keys
+    if ($exam) {
+        $exam['subject_name'] = $exam['subject_name'] ?? 'N/A';
+        $exam['duration'] = $exam['duration_minutes'] ?? 0;
+        $exam['exam_date'] = $exam['start_time'] ?? date('Y-m-d H:i:s');
+    }
+
+    return $exam;
+}
+
 
     // Create exam link
     public static function createExamLink($pdo, $exam_id, $link, $password, $expires_at = null) {
