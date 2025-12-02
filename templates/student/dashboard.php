@@ -109,30 +109,45 @@ include __DIR__ . "/sidebar.php";
                                         <td><?= htmlspecialchars($exam['exam_title']); ?></td>
 
                                         <!-- Subject -->
-                                        <td><?= htmlspecialchars($exam['subjects']); ?></td>
+                                        <td><?= htmlspecialchars($exam['subjects'] ?? 'N/A'); ?></td>
 
                                         <!-- Exam Date -->
                                         <td>
-                                            <?= date("d M Y", strtotime($exam['start_time'])); ?>
+                                            <?= !empty($exam['start_time']) ? date("d M Y H:i", strtotime($exam['start_time'])) : 'N/A'; ?>
                                         </td>
 
                                         <!-- Duration -->
                                         <td>
-    					 <?= isset($exam['duration_minutes']) 
-        				    ? intval($exam['duration_minutes']) . ' mins' 
-        				   : (isset($exam['duration']) ? intval($exam['duration']). ' mins' : 'N/A'); ?>
-					</td>
+                                            <?= isset($exam['duration_minutes']) 
+                                                ? intval($exam['duration_minutes']) . ' mins' 
+                                                : (isset($exam['duration']) ? intval($exam['duration']). ' mins' : 'N/A'); ?>
+                                        </td>
 
                                         <!-- Total Questions -->
                                         <td><?= intval($exam['total_questions']); ?></td>
 
                                         <!-- Start Exam Button -->
                                         <td>
-                                            <a href="student.php?action=startExam&exam_id=<?= $exam['exam_id']; ?>"
-                                               class="btn btn-sm btn-primary">
-                                                Start Exam
-                                            </a>
+                                            <?php
+                                            $now = new DateTime();
+                                            $examStart = !empty($exam['start_time']) ? new DateTime($exam['start_time']) : null;
+                                            
+                                            if (empty($exam['link_id'])) {
+                                                // Link not yet generated
+                                                echo '<span class="text-danger">Link not ready</span>';
+                                            } elseif ($examStart && $now < $examStart) {
+                                                // Exam not started yet
+                                                echo '<button class="btn btn-sm btn-secondary" disabled>Not Yet Available</button>';
+                                            } else {
+                                                // Exam can be started
+                                                echo '<a href="student.php?action=startExam&exam_id=' 
+                                                    . $exam['exam_id'] . '&link_id=' 
+                                                    . $exam['link_id'] . '" 
+                                                    class="btn btn-sm btn-primary">Start Exam</a>';
+                                            }
+                                            ?>
                                         </td>
+
                                     </tr>
 
                                 <?php endforeach; ?>
