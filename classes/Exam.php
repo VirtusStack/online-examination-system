@@ -137,40 +137,57 @@ public static function getAllStudents($pdo) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
     
-    // Assign students to exam
-    public static function assignStudents($pdo, $exam_id, $type, $data) {
-        $exam_id = (int)$exam_id;
+// Assign students to exam AND create unique exam links
+public static function assignStudents($pdo, $exam_id, $type, $data) {
+    $exam_id = (int)$exam_id;
 
-        // Delete old assignments
-        $stmtDel = $pdo->prepare("DELETE FROM exam_assigned_students WHERE exam_id = ?");
-        $stmtDel->execute([$exam_id]);
+    // Delete old assignments
+    $stmtDel = $pdo->prepare("DELETE FROM exam_assigned_students WHERE exam_id = ?");
+    $stmtDel->execute([$exam_id]);
 
-        $students = [];
+    $students = [];
 
-        if ($type === 'class' && !empty($data['class_id'])) {
-            $class_id = (int)$data['class_id'];
-            $stmt = $pdo->prepare("SELECT student_id FROM students WHERE class_id = ?");
-            $stmt->execute([$class_id]);
-            $students = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        } elseif ($type === 'individual' && !empty($data['student_ids'])) {
-            $students = is_array($data['student_ids']) 
-                        ? array_map('intval', $data['student_ids']) 
-                        : array_map('intval', explode(',', $data['student_ids']));
-        } elseif ($type === 'group' && !empty($data['group_id'])) {
-            $group_id = (int)$data['group_id'];
-            $stmt = $pdo->prepare("SELECT student_id FROM students WHERE group_id = ?");
-            $stmt->execute([$group_id]);
-            $students = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        }
+    // Get students to assign
+    if ($type === 'class' && !empty($data['class_id'])) {
+        $class_id = (int)$data['class_id'];
+        $stmt = $pdo->prepare("SELECT student_id, name, email FROM students WHERE class_id = ?");
+        $stmt->execute([$class_id]);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($type === 'individual' && !empty($data['student_ids'])) {
+        $ids = is_array($data['student_ids']) 
+               ? $data['student_ids'] 
+               : explode(',', $data['student_ids']);
+        $ids = array_map('intval', $ids);
 
-        // Insert assigned students
-        if (!empty($students)) {
-            $stmtInsert = $pdo->prepare("INSERT INTO exam_assigned_students (exam_id, student_id) VALUES (?, ?)");
-            foreach ($students as $student_id) {
-                $stmtInsert->execute([$exam_id, (int)$student_id]);
+        $stmt = $pdo->prepare("SELECT student_id, name, email FROM students WHERE student_id IN (" . implode(',', $ids) . ")");
+        $stmt->execute();
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Insert assigned students AND create exam links
+    if (!empty($students)) {
+        $stmtInsert = $pdo->prepare("INSERT INTO exam_assigned_students (exam_id, student_id) VALUES (?, ?)");
+        $stmtLink   = $pdo->prepare("
+            INSERT INTO exam_links (exam_id, unique_link, student_email, student_name, created_at)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+
+        foreach ($students as $student) {
+            // Assign student
+            $stmtInsert->execute([$exam_id, $student['student_id']]);
+
+            // Check if link already exists
+            $stmtCheck = $pdo->prepare("SELECT link_id FROM exam_links WHERE exam_id=? AND student_email=?");
+            $stmtCheck->execute([$exam_id, $student['email']]);
+            if (!$stmtCheck->fetch()) {
+                // Create unique link
+                $unique_link = uniqid('exam_', true);
+                $stmtLink->execute([$exam_id, $unique_link, $student['email'], $student['name']]);
             }
         }
     }
+}
+
 
     // Generate questions for an exam
     public static function generateQuestions($pdo, $exam_id) {
@@ -276,36 +293,41 @@ public static function getAllStudents($pdo) {
 }
 
 
-    public static function getAssignedExams($pdo, $student_id) {
-        try {
-          $stmt = $pdo->prepare("
-    SELECT 
-        e.exam_id,
-        e.exam_title,
-        e.duration_minutes,
-        e.total_questions,
-        e.start_time,
-        e.end_time,
-        (
-            SELECT GROUP_CONCAT(DISTINCT s.subject_name SEPARATOR ', ')
-            FROM exam_question_sources eqs
-            JOIN subjects s ON s.subject_id = eqs.subject_id
-            WHERE eqs.exam_id = e.exam_id
-        ) AS subjects
-   	 FROM exams e
-   	 JOIN exam_assigned_students eas 
-        ON eas.exam_id = e.exam_id
-    	WHERE eas.student_id = ?
-         ORDER BY e.start_time ASC
-	");
+   public static function getAssignedExams($pdo, $student_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                e.exam_id,
+                e.exam_title,
+                e.duration_minutes,
+                e.total_questions,
+                e.start_time,
+                e.end_time,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT s.subject_name SEPARATOR ', ')
+                    FROM exam_question_sources eqs
+                    JOIN subjects s ON s.subject_id = eqs.subject_id
+                    WHERE eqs.exam_id = e.exam_id
+                ) AS subjects,
+                el.link_id,
+                el.unique_link
+            FROM exam_assigned_students eas
+            JOIN exams e ON e.exam_id = eas.exam_id
+            JOIN students st ON st.student_id = eas.student_id
+            JOIN exam_links el 
+                ON el.exam_id = e.exam_id
+                AND el.student_email = st.email
+            WHERE eas.student_id = ?
+            ORDER BY e.start_time ASC
+        ");
         $stmt->execute([$student_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     } catch (PDOException $e) {
         error_log("Get assigned exams failed: " . $e->getMessage());
         return [];
-       }
     }
+}
+
 
     // Get assigned students
     public static function getAssignedStudents($pdo, $exam_id) {
@@ -346,6 +368,29 @@ public static function getExamByLink($pdo, $link, $student_id = 0) {
     return $exam;
 }
 
+   // get student answer
+    public static function getStudentAnswers($pdo, $student_id, $exam_id) {
+    $stmt = $pdo->prepare("
+        SELECT 
+            eq.question_id,
+            qb.question_text,
+            qb.option_a,
+            qb.option_b,
+            qb.option_c,
+            qb.option_d,
+            qb.correct_answer,
+            sa.answer AS student_answer,
+            sa.is_correct
+        FROM student_answers sa
+        JOIN exam_questions eq ON sa.exam_question_id = eq.id
+        JOIN question_bank qb ON eq.question_id = qb.id
+        WHERE sa.student_id = ? AND sa.exam_id = ?
+        ORDER BY eq.id ASC
+    ");
+
+    $stmt->execute([$student_id, $exam_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
     // Create exam link
     public static function createExamLink($pdo, $exam_id, $link, $password, $expires_at = null) {
