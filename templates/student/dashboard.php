@@ -126,27 +126,26 @@ include __DIR__ . "/sidebar.php";
                                         <!-- Total Questions -->
                                         <td><?= intval($exam['total_questions']); ?></td>
 
-                                        <!-- Start Exam Button -->
-                                        <td>
-                                            <?php
-                                            $now = new DateTime();
-                                            $examStart = !empty($exam['start_time']) ? new DateTime($exam['start_time']) : null;
-                                            
-                                            if (empty($exam['link_id'])) {
-                                                // Link not yet generated
-                                                echo '<span class="text-danger">Link not ready</span>';
-                                            } elseif ($examStart && $now < $examStart) {
-                                                // Exam not started yet
-                                                echo '<button class="btn btn-sm btn-secondary" disabled>Not Yet Available</button>';
-                                            } else {
-                                                // Exam can be started
-                                                echo '<a href="student.php?action=startExam&exam_id=' 
-                                                    . $exam['exam_id'] . '&link_id=' 
-                                                    . $exam['link_id'] . '" 
-                                                    class="btn btn-sm btn-primary">Start Exam</a>';
-                                            }
-                                            ?>
-                                        </td>
+                                       <?php
+$submittedExams = Exam::getSubmittedExams($pdo, $studentId ?? 0);
+?>
+
+<td>
+<?php if (in_array($exam['exam_id'], $submittedExams)): ?>
+    <button class="btn btn-sm btn-secondary" disabled>Already Submitted</button>
+<?php else: ?>
+    <?php
+        $now = new DateTime();
+        $examStart = !empty($exam['start_time']) ? new DateTime($exam['start_time']) : null;
+        if ($examStart && $now < $examStart):
+    ?>
+        <button class="btn btn-sm btn-secondary" disabled>Not Yet Available</button>
+    <?php else: ?>
+        <a href="student.php?action=startExam&exam_id=<?= $exam['exam_id'] ?>&link_id=<?= $exam['link_id'] ?>" class="btn btn-sm btn-primary">Start Exam</a>
+    <?php endif; ?>
+<?php endif; ?>
+</td>
+
 
                                     </tr>
 
