@@ -167,6 +167,14 @@ function startExam() {
         exit;
     }
 
+    /*  BLOCK STUDENT IF EXAM ALREADY SUBMITTED */
+    $check = $pdo->prepare("SELECT 1 FROM exam_results WHERE exam_id = ? AND link_id = ?");
+    $check->execute([$exam_id, $link_id]);
+
+    if ($check->fetchColumn()) {
+        header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
+        exit;
+    }
     // Get Subjects for this exam
     $stmtSub = $pdo->prepare("
         SELECT DISTINCT s.subject_name
@@ -201,6 +209,17 @@ function liveExam() {
         exit;
     }
 
+    /*  BLOCK STUDENT IF EXAM ALREADY SUBMITTED */
+    $check = $pdo->prepare("SELECT 1 FROM exam_results WHERE exam_id = ? AND link_id = ?");
+    $check->execute([$exam_id, $link_id]);
+
+    if ($check->fetchColumn()) {
+        header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
+        exit;
+    }
+
+
+    // Get questions
     $stmt = $pdo->prepare("
         SELECT q.*
         FROM exam_questions eq
@@ -222,7 +241,6 @@ function liveExam() {
 
     require(__DIR__ . "/templates/student/live_exam.php");
 }
-
 
 function submitExam() {
     global $pdo;
