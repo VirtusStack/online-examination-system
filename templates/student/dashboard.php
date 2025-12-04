@@ -73,92 +73,109 @@ include __DIR__ . "/sidebar.php";
 
             </div> <!-- Row end -->
 
-            <!-- Assigned Exams Table -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Your Upcoming Exams</h6>
-                </div>
+           <!-- Assigned Exams Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Your Upcoming Exams</h6>
+    </div>
 
-                <div class="card-body">
+    <div class="card-body">
 
-                    <?php if (empty($results['assignedExams'])): ?>
-                        <!-- No exams message -->
-                        <div class="alert alert-info">No exams assigned yet.</div>
+        <?php if (empty($results['assignedExams'])): ?>
+            <!-- No exams message -->
+            <div class="alert alert-info">No exams assigned yet.</div>
 
-                    <?php else: ?>
+        <?php else: ?>
 
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <thead>
-                                <tr>
-                                    <th>Exam Name</th>
-                                    <th>Subject</th>
-                                    <th>Date</th>
-                                    <th>Duration</th>
-                                    <th>Total Questions</th>
-                                    <th>Action</th>
-                                </tr>
-                                </thead>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>Exam Name</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Duration</th>
+                        <th>Total Questions</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
 
-                                <tbody>
+                    <tbody>
 
-                                <?php foreach ($results['assignedExams'] as $exam): ?>
+                    <?php
+                    // Ensure $studentId is set
+                    $studentId = $studentId ?? $results['studentId'] ?? 0;
 
-                                    <tr>
-                                        <!-- Exam Title -->
-                                        <td><?= htmlspecialchars($exam['exam_title']); ?></td>
+                    // Get list of exams already submitted by this student
+                    $submittedExams = Exam::getSubmittedExams($pdo, $studentId);
+                    ?>
 
-                                        <!-- Subject -->
-                                        <td><?= htmlspecialchars($exam['subjects'] ?? 'N/A'); ?></td>
+                    <?php foreach ($results['assignedExams'] as $exam): ?>
 
-                                        <!-- Exam Date -->
-                                        <td>
-                                            <?= !empty($exam['start_time']) ? date("d M Y H:i", strtotime($exam['start_time'])) : 'N/A'; ?>
-                                        </td>
+                        <tr>
+                            <!-- Exam Title -->
+                            <td><?= htmlspecialchars($exam['exam_title']); ?></td>
 
-                                        <!-- Duration -->
-                                        <td>
-                                            <?= isset($exam['duration_minutes']) 
-                                                ? intval($exam['duration_minutes']) . ' mins' 
-                                                : (isset($exam['duration']) ? intval($exam['duration']). ' mins' : 'N/A'); ?>
-                                        </td>
+                            <!-- Subject -->
+                            <td><?= htmlspecialchars($exam['subjects'] ?? 'N/A'); ?></td>
 
-                                        <!-- Total Questions -->
-                                        <td><?= intval($exam['total_questions']); ?></td>
+                            <!-- Exam Date -->
+                            <td>
+                                <?= !empty($exam['start_time']) ? date("d M Y H:i", strtotime($exam['start_time'])) : 'N/A'; ?>
+                            </td>
 
-                                       <?php
-$submittedExams = Exam::getSubmittedExams($pdo, $studentId ?? 0);
-?>
+                            <!-- Duration -->
+                            <td>
+                                <?= isset($exam['duration_minutes']) 
+                                    ? intval($exam['duration_minutes']) . ' mins' 
+                                    : (isset($exam['duration']) ? intval($exam['duration']). ' mins' : 'N/A'); ?>
+                            </td>
 
-<td>
-<?php if (in_array($exam['exam_id'], $submittedExams)): ?>
-    <button class="btn btn-sm btn-secondary" disabled>Already Submitted</button>
-<?php else: ?>
-    <?php
-        $now = new DateTime();
-        $examStart = !empty($exam['start_time']) ? new DateTime($exam['start_time']) : null;
-        if ($examStart && $now < $examStart):
-    ?>
-        <button class="btn btn-sm btn-secondary" disabled>Not Yet Available</button>
-    <?php else: ?>
-        <a href="student.php?action=startExam&exam_id=<?= $exam['exam_id'] ?>&link_id=<?= $exam['link_id'] ?>" class="btn btn-sm btn-primary">Start Exam</a>
-    <?php endif; ?>
-<?php endif; ?>
-</td>
+                            <!-- Total Questions -->
+                            <td><?= intval($exam['total_questions']); ?></td>
 
+                            <!-- Action Button Logic -->
+                            <td>
+                                <?php
+                                // Current time
+                                $now = new DateTime();
+                                
+                                // Exam start and end times
+                                $examStart = !empty($exam['start_time']) ? new DateTime($exam['start_time']) : null;
+                                $examEnd   = !empty($exam['end_time']) ? new DateTime($exam['end_time']) : null;
+                                ?>
 
-                                    </tr>
+                                <?php if (in_array($exam['exam_id'], $submittedExams)): ?>
+                                    <!-- Already Submitted -->
+                                    <button class="btn btn-sm btn-secondary" disabled>Already Submitted</button>
 
-                                <?php endforeach; ?>
+                                <?php elseif ($examStart && $now < $examStart): ?>
+                                    <!-- Exam not started yet -->
+                                    <button class="btn btn-sm btn-secondary" disabled>Not Yet Available</button>
 
-                                </tbody>
-                            </table>
-                        </div>
+                                <?php elseif ($examEnd && $now > $examEnd): ?>
+                                    <!-- Exam is over -->
+                                    <button class="btn btn-sm btn-secondary" disabled>Exam Over</button>
 
-                    <?php endif; ?>
+                                <?php else: ?>
+                                    <!-- Start Exam -->
+                                    <a href="student.php?action=startExam&exam_id=<?= $exam['exam_id'] ?>&link_id=<?= $exam['link_id'] ?>" class="btn btn-sm btn-primary">Start Exam</a>
+                                <?php endif; ?>
+                            </td>
 
-                </div>
+                        </tr>
+
+                    <?php endforeach; ?>
+
+                    </tbody>
+                </table>
             </div>
+
+        <?php endif; ?>
+
+    </div>
+</div>
+
 
         </div>
         <!-- /.container-fluid -->
