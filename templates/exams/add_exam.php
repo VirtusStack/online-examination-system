@@ -17,18 +17,15 @@ $results['students'] = $results['students'] ?? [];
 ?>
 
 <div id="wrapper">
-
     <!-- Sidebar -->
     <?php include __DIR__ . "/../include/sidebar.php"; ?>
 
     <div id="content-wrapper" class="d-flex flex-column">
         <div id="content">
-
             <!-- Navbar -->
             <?php include __DIR__ . "/../include/navbar.php"; ?>
 
             <div class="container-fluid">
-
                 <h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($results['pageTitle'] ?? 'Add Exam') ?></h1>
 
                 <!-- Feedback -->
@@ -103,64 +100,91 @@ $results['students'] = $results['students'] ?? [];
                                 </select>
                             </div>
 
-                            <!-- Question Sources -->
+                            <!-- Question Sources with No. of Qs and Difficulty -->
                             <div class="form-group mb-3">
-                                <label>Select Question Bank & Subject:</label>
-                                <?php if (!empty($results['question_banks']) && !empty($results['subjects'])): ?>
+                                <label>Select Question Bank & Subjects:</label>
+                                <?php if (!empty($results['question_banks'])): ?>
                                     <?php foreach ($results['question_banks'] as $bank): ?>
                                         <div class="mb-2"><strong><?= htmlspecialchars($bank['bank_name']) ?></strong></div>
-                                        <?php foreach ($results['subjects'] as $sub): ?>
-                                            <div class="form-check mb-1">
-                                                <input type="checkbox" class="form-check-input" 
-                                                       name="exam_question_sources[<?= $bank['bank_id'] ?>][]" 
-                                                       value="<?= $sub['subject_id'] ?>"
-                                                       <?= isset($results['exam_question_sources'][$bank['bank_id']]) && in_array($sub['subject_id'], $results['exam_question_sources'][$bank['bank_id']])?'checked':'' ?>>
-                                                <label class="form-check-label"><?= htmlspecialchars($sub['subject_name']) ?></label>
+                                        <?php 
+                                        $bankSubjects = QuestionBankSubject::getSubjectsByBank($pdo, $bank['bank_id']);
+                                        
+                                        if (!empty($bankSubjects)):
+                                            foreach ($bankSubjects as $sub):
+                                                $selectedLimit = $results['exam_question_sources'][$bank['bank_id']][$sub['subject_id']]['limit'] ?? '';
+                                                $selectedDiff  = $results['exam_question_sources'][$bank['bank_id']][$sub['subject_id']]['difficulty'] ?? 'Easy';
+                                        ?>
+                                            <div class="row mb-2">
+                                                <div class="col-md-4">
+                                                    <label><?= htmlspecialchars($sub['subject_name']) ?></label>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <input type="number" min="0" name="exam_question_sources[<?= $bank['bank_id'] ?>][<?= $sub['subject_id'] ?>][limit]" class="form-control" placeholder="No. of Qs" value="<?= htmlspecialchars($selectedLimit) ?>">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <select name="exam_question_sources[<?= $bank['bank_id'] ?>][<?= $sub['subject_id'] ?>][difficulty]" class="form-control">
+                                                        <option value="Easy" <?= $selectedDiff=='Easy'?'selected':'' ?>>Easy</option>
+                                                        <option value="Medium" <?= $selectedDiff=='Medium'?'selected':'' ?>>Medium</option>
+                                                        <option value="Hard" <?= $selectedDiff=='Hard'?'selected':'' ?>>Hard</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                        <?php endforeach; ?>
+                                        <?php 
+                                            endforeach;
+                                        else: 
+                                            echo "<div class='text-muted ml-3'>No subjects in this bank.</div>";
+                                        endif; 
+                                        ?>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <div class="text-danger">No question banks or subjects found. Please add them first.</div>
+                                    <div class="text-danger">No question banks found. Please add them first.</div>
                                 <?php endif; ?>
                             </div>
 
-                        <!-- Assign Students -->
-			<div class="form-group mb-3">
-    			   <label>Assign Exam To:</label>
-                	   <select name="assign_type" id="assignType" class="form-control">
-        			<option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
-       			        <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
-    			</select>
-		     </div>
+                            <!-- Total Questions -->
+                            <div class="mb-3">
+                                <strong>Total Questions Selected: </strong>
+                                <span id="totalQuestions">0</span>
+                            </div>
 
-		         <!-- Classes Dropdown -->
-		         <div class="form-group mb-3" id="classSelect" style="display: none;">
-    		             <label>Select Class:</label>
-    		             <select name="assign_data[class_id]" class="form-control">
-        	                <?php foreach ($results['classes'] as $cls): ?>
-            	                <option value="<?= $cls['class_id'] ?>"><?= htmlspecialchars($cls['class_name']) ?></option>
-        		         <?php endforeach; ?>
-    		              </select>
-		         </div>
+                            <!-- Assign Students -->
+                            <div class="form-group mb-3">
+                                <label>Assign Exam To:</label>
+                                <select name="assign_type" id="assignType" class="form-control">
+                                    <option value="class" <?= (isset($results['assign_type']) && $results['assign_type']=='class')?'selected':'' ?>>Class</option>
+                                    <option value="individual" <?= (isset($results['assign_type']) && $results['assign_type']=='individual')?'selected':'' ?>>Individual Students</option>
+                                </select>
+                            </div>
 
-		 	<!-- Students Dropdown -->
-			<div class="form-group mb-3" id="studentSelect" style="display: none;">
-    		   	     <label>Select Students:</label>
-    		             <select name="assign_data[student_ids][]" class="form-control" multiple>
-        			<?php foreach ($results['students'] as $stu): ?>
-            			<option value="<?= $stu['student_id'] ?>"><?= htmlspecialchars($stu['name']) ?> (<?= $stu['email'] ?>)</option>
-        			<?php endforeach; ?>
-    		   	     </select>
-    		  	    <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
-	        	</div>
+                            <!-- Classes Dropdown -->
+                            <div class="form-group mb-3" id="classSelect" style="display: none;">
+                                <label>Select Class:</label>
+                                <select name="assign_data[class_id]" class="form-control">
+                                    <?php foreach ($results['classes'] as $cls): ?>
+                                        <option value="<?= $cls['class_id'] ?>"><?= htmlspecialchars($cls['class_name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
 
-                           <div class="form-group mb-3">
-    				<label>Online Exam Link:</label>
-    				<input type="text" name="exam_link" class="form-control" readonly value="<?= htmlspecialchars($results['exam_link'] ?? '') ?>">
-    				<small class="form-text text-muted">Students will access exam via this link.</small>
-    				<input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password" required>
-    				<input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
-				</div>
+                            <!-- Students Dropdown -->
+                            <div class="form-group mb-3" id="studentSelect" style="display: none;">
+                                <label>Select Students:</label>
+                                <select name="assign_data[student_ids][]" class="form-control" multiple>
+                                    <?php foreach ($results['students'] as $stu): ?>
+                                        <option value="<?= $stu['student_id'] ?>"><?= htmlspecialchars($stu['name']) ?> (<?= $stu['email'] ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
+                            </div>
+
+                            <!-- Online Exam Link -->
+                            <div class="form-group mb-3">
+                                <label>Online Exam Link:</label>
+                                <input type="text" name="exam_link" class="form-control" readonly value="<?= htmlspecialchars($results['exam_link'] ?? '') ?>">
+                                <small class="form-text text-muted">Students will access exam via this link.</small>
+                                <input type="text" name="exam_password" class="form-control mt-2" placeholder="Set password" required>
+                                <input type="datetime-local" name="expires_at" class="form-control mt-2" value="<?= !empty($results['expires_at']) ? date('Y-m-d\TH:i', strtotime($results['expires_at'])) : '' ?>">
+                            </div>
 
                             <!-- Submit -->
                             <button type="submit" class="btn btn-primary">Add Exam</button>
@@ -168,7 +192,6 @@ $results['students'] = $results['students'] ?? [];
                         </form>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -190,5 +213,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     assignType.addEventListener('change', toggleAssignFields);
     toggleAssignFields(); // initial call
+
+    // Calculate total questions dynamically
+    function updateTotalQuestions() {
+        let total = 0;
+        document.querySelectorAll('input[name*="[limit]"]').forEach(input => {
+            let val = parseInt(input.value);
+            if (!isNaN(val)) total += val;
+        });
+        document.getElementById('totalQuestions').innerText = total;
+    }
+    document.querySelectorAll('input[name*="[limit]"]').forEach(input => {
+        input.addEventListener('input', updateTotalQuestions);
+    });
+    updateTotalQuestions();
 });
 </script>
