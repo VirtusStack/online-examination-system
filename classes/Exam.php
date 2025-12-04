@@ -1,4 +1,4 @@
-<?php
+<?php 
 // /classes/Exam.php
 // ---------------------------
 // Exam class handles all exam CRUD and management
@@ -188,43 +188,86 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
     }
 }
 
+// Generate questions for an exam using difficulty percentage logic
+public static function generateQuestions($pdo, $exam_id)
+{
+    // Delete old questions
+    $stmt = $pdo->prepare("DELETE FROM exam_questions WHERE exam_id = ?");
+    $stmt->execute([$exam_id]);
 
-    // Generate questions for an exam
-    public static function generateQuestions($pdo, $exam_id) {
-        // Delete old questions
-        $stmt = $pdo->prepare("DELETE FROM exam_questions WHERE exam_id = ?");
-        $stmt->execute([$exam_id]);
+    $sources = self::getQuestionSources($pdo, $exam_id);
 
-        $sources = self::getQuestionSources($pdo, $exam_id);
-        foreach ($sources as $source) {
-            $sql = "SELECT question_id FROM questions WHERE bank_id=? AND subject_id=?";
-            $params = [$source['bank_id'], $source['subject_id']];
+    foreach ($sources as $source) {
 
-            if (!empty($source['difficulty'])) {
-                $sql .= " AND difficulty=?";
-                $params[] = $source['difficulty'];
-            }
+        $bank_id    = (int)$source['bank_id'];
+        $subject_id = (int)$source['subject_id'];
+        $total      = (int)$source['question_limit'];   // total questions needed
 
-            // FIX LIMIT SQL issue
-            $limit = (int)($source['question_limit'] ?? 10);
-            $sql .= " ORDER BY RAND() LIMIT $limit";
+        if ($total <= 0) continue;
 
-            $stmtQ = $pdo->prepare($sql);
-            $stmtQ->execute($params);
-            $questions = $stmtQ->fetchAll(PDO::FETCH_COLUMN);
+        // Difficulty distribution
+        $easyCount   = round($total * 0.20);
+        $mediumCount = round($total * 0.30);
+        $hardCount   = $total - ($easyCount + $mediumCount);
 
-            $stmtInsert = $pdo->prepare("INSERT INTO exam_questions (exam_id, question_id) VALUES (?, ?)");
-            foreach ($questions as $question_id) {
-                $stmtInsert->execute([$exam_id, $question_id]);
-            }
+        $selected = [];
+
+        // Helper function to fetch N random questions
+        $fetchQ = function($difficulty, $limit) use ($pdo, $bank_id, $subject_id) {
+
+            if ($limit <= 0) return [];
+
+            $sql = "SELECT question_id 
+                    FROM questions 
+                    WHERE bank_id=? AND subject_id=? AND difficulty=? 
+                    ORDER BY RAND() LIMIT $limit";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$bank_id, $subject_id, $difficulty]);
+
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        };
+
+        // Fetch difficulty-based questions
+        $easyQs   = $fetchQ("Easy", $easyCount);
+        $mediumQs = $fetchQ("Medium", $mediumCount);
+        $hardQs   = $fetchQ("Hard", $hardCount);
+
+        // Merge all selected questions
+        $selected = array_merge($easyQs, $mediumQs, $hardQs);
+
+        // If shortages → fill remaining from ANY difficulty
+        $remaining = $total - count($selected);
+
+        if ($remaining > 0) {
+
+            $sql = "SELECT question_id 
+                    FROM questions 
+                    WHERE bank_id=? AND subject_id=? 
+                    AND question_id NOT IN (" . (count($selected) ? implode(",", $selected) : "0") . ")
+                    ORDER BY RAND() LIMIT $remaining";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$bank_id, $subject_id]);
+            $fallbackQs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $selected = array_merge($selected, $fallbackQs);
+        }
+
+        // Insert questions into exam
+        $insert = $pdo->prepare("INSERT INTO exam_questions (exam_id, question_id) VALUES (?, ?)");
+
+        foreach ($selected as $qid) {
+            $insert->execute([$exam_id, $qid]);
         }
     }
+}
+
 
      // Fetch exam details for a specific student 
      public static function getExamForStudent($pdo, $exam_id, $student_id = 0) {
     try {
         $student_id = $student_id ?: ($_SESSION['student_id'] ?? 0);
-
         if (!$student_id) return false;
 
         $stmt = $pdo->prepare("
@@ -233,12 +276,11 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
                 e.duration_minutes AS duration,
                 e.start_time AS exam_date,
                 (
-                    SELECT s.subject_name 
+                    SELECT GROUP_CONCAT(DISTINCT COALESCE(s.subject_name, 'Unknown') SEPARATOR ', ')
                     FROM exam_question_sources eqs
-                    JOIN subjects s ON s.subject_id = eqs.subject_id
+                    LEFT JOIN subjects s ON s.subject_id = eqs.subject_id
                     WHERE eqs.exam_id = e.exam_id
-                    LIMIT 1
-                ) AS subject_name
+                ) AS subjects
             FROM exams e
             JOIN exam_assigned_students eas 
                 ON e.exam_id = eas.exam_id
@@ -248,18 +290,18 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
         $stmt->execute([$exam_id, $student_id]);
         $exam = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Fallbacks to avoid undefined array keys
-        $exam['subject_name'] = $exam['subject_name'] ?? 'N/A';
+        $exam['subjects'] = $exam['subjects'] ?: 'N/A';
         $exam['duration'] = $exam['duration'] ?? 0;
         $exam['exam_date'] = $exam['exam_date'] ?? date('Y-m-d H:i:s');
 
         return $exam;
 
-      } catch (PDOException $e) {
+    } catch (PDOException $e) {
         error_log("getExamForStudent failed: " . $e->getMessage());
         return false;
-       }
-     }
+    }
+}
+
 
    // Get exam questions WITH options
    public static function getExamQuestions($examId)
@@ -391,6 +433,47 @@ public static function getExamByLink($pdo, $link, $student_id = 0) {
     $stmt->execute([$student_id, $exam_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+public static function getSubjectsByBank($pdo, $bank_id)
+{
+    try {
+        $stmt = $pdo->prepare("
+            SELECT s.subject_id, s.subject_name
+            FROM question_bank_subjects qbs
+            JOIN subjects s ON s.subject_id = qbs.subject_id
+            WHERE qbs.bank_id = ?
+            ORDER BY s.subject_name
+        ");
+        $stmt->execute([$bank_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Error fetching subjects by bank: " . $e->getMessage());
+        return [];
+    }
+}
+
+public static function getSubmittedExams($pdo, $studentId) {
+    if (!$studentId) return [];
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT exam_id
+            FROM exam_answers
+            WHERE student_id = ?
+        ");
+        $stmt->execute([$studentId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Return array of exam IDs
+        return array_column($rows, 'exam_id');
+
+    } catch (PDOException $e) {
+        error_log("Error fetching submitted exams: " . $e->getMessage());
+        return [];
+    }
+}
+
 
     // Create exam link
     public static function createExamLink($pdo, $exam_id, $link, $password, $expires_at = null) {
