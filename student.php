@@ -146,6 +146,7 @@ function studentDashboard() {
     require(__DIR__ . "/templates/student/dashboard.php");
 }
 
+// Start Exam
 function startExam() {
     global $pdo;
 
@@ -157,7 +158,7 @@ function startExam() {
         exit;
     }
 
-    // Get Exam
+    // FETCH EXAM
     $stmt = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ?");
     $stmt->execute([$exam_id]);
     $exam = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -167,32 +168,37 @@ function startExam() {
         exit;
     }
 
-    /*  BLOCK STUDENT IF EXAM ALREADY SUBMITTED */
-    $check = $pdo->prepare("SELECT 1 FROM exam_results WHERE exam_id = ? AND link_id = ?");
+    // BLOCK IF STUDENT ALREADY SUBMITTED EXAM
+    $check = $pdo->prepare("
+        SELECT 1 FROM exam_results 
+        WHERE exam_id = ? AND link_id = ?
+    ");
     $check->execute([$exam_id, $link_id]);
 
     if ($check->fetchColumn()) {
         header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
         exit;
     }
-    // Get Subjects for this exam
+
+    // FETCH SUBJECTS FROM exam_question_sources
     $stmtSub = $pdo->prepare("
         SELECT DISTINCT s.subject_name
-        FROM exam_questions eq
-        JOIN questions q ON eq.question_id = q.question_id
-        JOIN subjects s ON q.subject_id = s.subject_id
-        WHERE eq.exam_id = ?
+        FROM exam_question_sources eqs
+        LEFT JOIN subjects s ON s.subject_id = eqs.subject_id
+        WHERE eqs.exam_id = ?
     ");
     $stmtSub->execute([$exam_id]);
+
     $subjects = $stmtSub->fetchAll(PDO::FETCH_COLUMN);
 
-    // Add subjects as comma-separated string
+    // Add subjects to exam array
     $exam['subject_name'] = !empty($subjects) ? implode(', ', $subjects) : 'N/A';
 
-    // Store in session
+    // STORE SESSION   
     $_SESSION['exam_id'] = $exam_id;
     $_SESSION['link_id'] = $link_id;
 
+    // LOAD VIEW
     require(__DIR__ . "/templates/student/start_exam.php");
 }
 
@@ -209,8 +215,11 @@ function liveExam() {
         exit;
     }
 
-    /*  BLOCK STUDENT IF EXAM ALREADY SUBMITTED */
-    $check = $pdo->prepare("SELECT 1 FROM exam_results WHERE exam_id = ? AND link_id = ?");
+    // BLOCK IF ALREADY SUBMITTED
+    $check = $pdo->prepare("
+        SELECT 1 FROM exam_results 
+        WHERE exam_id = ? AND link_id = ?
+    ");
     $check->execute([$exam_id, $link_id]);
 
     if ($check->fetchColumn()) {
@@ -218,24 +227,56 @@ function liveExam() {
         exit;
     }
 
-
-    // Get questions
+    // -------------------------------------------------------------------
+    // FETCH QUESTION SOURCES (These define which questions to pull)
+    // -------------------------------------------------------------------
     $stmt = $pdo->prepare("
-        SELECT q.*
-        FROM exam_questions eq
-        JOIN questions q ON eq.question_id = q.question_id
-        WHERE eq.exam_id = ?
+        SELECT bank_id, subject_id, difficulty, question_limit
+        FROM exam_question_sources
+        WHERE exam_id = ?
     ");
     $stmt->execute([$exam_id]);
-    $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $sources = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Build options array for each question
+    $questions = [];
+
+    // -------------------------------------------------------------------
+    // FOR EACH SOURCE → PICK RANDOM QUESTIONS
+    // -------------------------------------------------------------------
+    foreach ($sources as $src) {
+
+        $sql = "
+            SELECT q.*
+            FROM questions q
+            WHERE q.bank_id = ?
+              AND q.subject_id = ?
+        ";
+
+        if (!empty($src['difficulty'])) {
+            $sql .= " AND q.difficulty = " . $pdo->quote($src['difficulty']);
+        }
+
+        $sql .= " ORDER BY RAND() LIMIT " . intval($src['question_limit']);
+
+        $stmtQ = $pdo->prepare($sql);
+        $stmtQ->execute([$src['bank_id'], $src['subject_id']]);
+
+        $picked = $stmtQ->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($picked as $q) {
+            $questions[] = $q;
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // BUILD OPTIONS
+    // -------------------------------------------------------------------
     foreach ($questions as &$q) {
         $q['options'] = [
             'A' => $q['option_a'],
             'B' => $q['option_b'],
             'C' => $q['option_c'],
-            'D' => $q['option_d'],
+            'D' => $q['option_d']
         ];
     }
 
