@@ -16,6 +16,9 @@ function run_sql_file($conn, $file_path) {
     if (!file_exists($file_path)) return false;
 
     $sql = file_get_contents($file_path);
+    if ($sql === false || trim($sql) === '') {
+        throw new Exception("SQL file '$file_path' is empty or unreadable");
+    }
 
     // Remove comments
     $sql = preg_replace('/--.*\n/', '', $sql);
@@ -23,6 +26,11 @@ function run_sql_file($conn, $file_path) {
 
     // Split safely by semicolon outside quotes
     $queries = preg_split('/;(?=(?:[^\'"]|\'[^\']*\'|"[^"]*")*$)/m', $sql);
+
+    // Ensure $queries is always an array
+    if (!is_array($queries)) {
+        $queries = [];
+    }
 
     foreach ($queries as $q) {
         $q = trim($q);
