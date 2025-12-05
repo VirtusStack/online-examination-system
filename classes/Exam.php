@@ -10,8 +10,8 @@ class Exam {
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO exams 
-                (exam_title, exam_description, duration_minutes, total_questions, shuffle_questions, shuffle_options, negative_marking, start_time, end_time, assign_type, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                (exam_title, exam_description, duration_minutes, total_questions, shuffle_questions, shuffle_options, negative_marking, start_time, end_time, assign_type, easy_percentage, medium_percentage, hard_percentage, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $data['exam_title'] ?? '',
@@ -23,7 +23,10 @@ class Exam {
                 $data['negative_marking'] ?? 0,
                 $data['start_time'] ?? null,
                 $data['end_time'] ?? null,
-                $data['assign_type'] ?? 'class'
+                $data['assign_type'] ?? 'class',
+                $data['easy_percentage'] ?? 0,
+                $data['medium_percentage'] ?? 0,
+                $data['hard_percentage'] ?? 0,
             ]);
             $exam_id = $pdo->lastInsertId();
 
@@ -66,8 +69,11 @@ class Exam {
                     negative_marking=?, 
                     start_time=?, 
                     end_time=?, 
-                    assign_type=?
-                WHERE exam_id=?
+                    assign_type=?,
+		    easy_percentage=?,
+		    medium_percentage=?,
+		    hard_percentage=?
+                  WHERE exam_id=?
             ");
             $updated = $stmt->execute([
                 $data['exam_title'] ?? '',
@@ -80,6 +86,9 @@ class Exam {
                 $data['start_time'] ?? null,
                 $data['end_time'] ?? null,
                 $data['assign_type'] ?? 'class',
+                $data['easy_percentage'] ?? 0,
+                $data['medium_percentage'] ?? 0,
+                $data['hard_percentage'] ?? 0,
                 $exam_id
             ]);
 
@@ -188,12 +197,14 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
     }
 }
 
-// Generate questions for an exam using difficulty percentage logic
 public static function generateQuestions($pdo, $exam_id)
 {
     // Delete old questions
     $stmt = $pdo->prepare("DELETE FROM exam_questions WHERE exam_id = ?");
     $stmt->execute([$exam_id]);
+
+    // Fetch exam info with difficulty percentages
+    $exam = self::getExamById($pdo, $exam_id);
 
     $sources = self::getQuestionSources($pdo, $exam_id);
 
@@ -201,20 +212,18 @@ public static function generateQuestions($pdo, $exam_id)
 
         $bank_id    = (int)$source['bank_id'];
         $subject_id = (int)$source['subject_id'];
-        $total      = (int)$source['question_limit'];   // total questions needed
+        $total      = (int)$source['question_limit'];   // total questions for this source
 
         if ($total <= 0) continue;
 
-        // Difficulty distribution
-        $easyCount   = round($total * 0.20);
-        $mediumCount = round($total * 0.30);
+        $easyCount   = round($total * ($exam['easy_percentage'] / 100));
+        $mediumCount = round($total * ($exam['medium_percentage'] / 100));
         $hardCount   = $total - ($easyCount + $mediumCount);
 
         $selected = [];
 
         // Helper function to fetch N random questions
         $fetchQ = function($difficulty, $limit) use ($pdo, $bank_id, $subject_id) {
-
             if ($limit <= 0) return [];
 
             $sql = "SELECT question_id 
@@ -228,19 +237,16 @@ public static function generateQuestions($pdo, $exam_id)
             return $stmt->fetchAll(PDO::FETCH_COLUMN);
         };
 
-        // Fetch difficulty-based questions
+        // Fetch questions by difficulty
         $easyQs   = $fetchQ("Easy", $easyCount);
         $mediumQs = $fetchQ("Medium", $mediumCount);
         $hardQs   = $fetchQ("Hard", $hardCount);
 
-        // Merge all selected questions
         $selected = array_merge($easyQs, $mediumQs, $hardQs);
 
-        // If shortages → fill remaining from ANY difficulty
+        // Fill shortages if any
         $remaining = $total - count($selected);
-
         if ($remaining > 0) {
-
             $sql = "SELECT question_id 
                     FROM questions 
                     WHERE bank_id=? AND subject_id=? 
@@ -254,9 +260,8 @@ public static function generateQuestions($pdo, $exam_id)
             $selected = array_merge($selected, $fallbackQs);
         }
 
-        // Insert questions into exam
+        // Insert into exam_questions
         $insert = $pdo->prepare("INSERT INTO exam_questions (exam_id, question_id) VALUES (?, ?)");
-
         foreach ($selected as $qid) {
             $insert->execute([$exam_id, $qid]);
         }
