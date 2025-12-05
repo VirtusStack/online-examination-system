@@ -102,47 +102,74 @@ $results['students'] = $results['students'] ?? [];
                                 </select>
                             </div>
 
-                            <!-- Question Sources with No. of Qs and Difficulty -->
-                            <div class="form-group mb-3">
-                                <label>Select Question Bank & Subjects:</label>
-                                <?php if (!empty($results['question_banks'])): ?>
-                                    <?php foreach ($results['question_banks'] as $bank): ?>
-                                        <div class="mb-2"><strong><?= htmlspecialchars($bank['bank_name']) ?></strong></div>
-                                        <?php 
-                                        // Fetch subjects for this bank only
-                                        $bankSubjects = QuestionBankSubject::getSubjectsByBank($pdo, $bank['bank_id']);
-                                        
-                                        if (!empty($bankSubjects)):
-                                            foreach ($bankSubjects as $sub):
-                                                $selectedLimit = $results['exam_question_sources'][$bank['bank_id']][$sub['subject_id']]['limit'] ?? '';
-                                                $selectedDiff  = $results['exam_question_sources'][$bank['bank_id']][$sub['subject_id']]['difficulty'] ?? 'Easy';
-                                        ?>
-                                            <div class="row mb-2">
-                                                <div class="col-md-4">
-                                                    <label><?= htmlspecialchars($sub['subject_name']) ?></label>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <input type="number" min="0" name="exam_question_sources[<?= $bank['bank_id'] ?>][<?= $sub['subject_id'] ?>][limit]" class="form-control" placeholder="No. of Qs" value="<?= htmlspecialchars($selectedLimit) ?>">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <select name="exam_question_sources[<?= $bank['bank_id'] ?>][<?= $sub['subject_id'] ?>][difficulty]" class="form-control">
-                                                        <option value="Easy" <?= $selectedDiff=='Easy'?'selected':'' ?>>Easy</option>
-                                                        <option value="Medium" <?= $selectedDiff=='Medium'?'selected':'' ?>>Medium</option>
-                                                        <option value="Hard" <?= $selectedDiff=='Hard'?'selected':'' ?>>Hard</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        <?php 
-                                            endforeach;
-                                        else: 
-                                            echo "<div class='text-muted ml-3'>No subjects in this bank.</div>";
-                                        endif; 
-                                        ?>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="text-danger">No question banks found. Please add them first.</div>
-                                <?php endif; ?>
-                            </div>
+                          <!-- Difficulty Percentages -->
+			  <div class="form-group mb-3">
+    			<label><strong>Difficulty Distribution (%):</strong></label>
+
+    			<div class="row">
+        		<div class="col-md-4">
+            		<label>Easy %</label>
+            		<input type="number" name="easy_percent" class="form-control" value="<?= htmlspecialchars($results['easy_percent'] ?? 20) ?>" required>
+       			 </div>
+
+        		<div class="col-md-4">
+            		<label>Medium %</label>
+            		<input type="number" name="medium_percent" class="form-control"
+                		value="<?= htmlspecialchars($results['medium_percent'] ?? 30) ?>" required>
+        		</div>
+
+        		<div class="col-md-4">
+            		<label>Hard %</label>
+            		<input type="number" name="hard_percent" class="form-control"
+                	value="<?= htmlspecialchars($results['hard_percent'] ?? 50) ?>" required>
+        		</div>
+    			</div>
+
+    			<small class="text-muted">Total must be 100%.</small>
+			</div>
+
+
+                           <!-- Question Sources -->
+			  <div class="form-group mb-3">
+    			  <label>Select Question Bank & Subjects:</label>
+
+    			  <?php if (!empty($results['question_banks'])): ?>
+        		<?php foreach ($results['question_banks'] as $bank): ?>
+            		<div class="mb-2"><strong><?= htmlspecialchars($bank['bank_name']) ?></strong></div>
+
+            		<?php 
+            		$bankSubjects = QuestionBankSubject::getSubjectsByBank($pdo, $bank['bank_id']);
+            
+            		if (!empty($bankSubjects)):
+                	foreach ($bankSubjects as $sub):
+                    $selectedLimit = $results['exam_question_sources'][$bank['bank_id']][$sub['subject_id']]['limit'] ?? '';
+            		?>
+                    <div class="row mb-2">
+                        <div class="col-md-4">
+                            <label><?= htmlspecialchars($sub['subject_name']) ?></label>
+                        </div>
+
+                        <div class="col-md-3">
+                            <input type="number" 
+                                   min="0"
+                                   name="exam_question_sources[<?= $bank['bank_id'] ?>][<?= $sub['subject_id'] ?>][limit]"
+                                   class="form-control"
+                                   placeholder="No. of Qs"
+                                   value="<?= htmlspecialchars($selectedLimit) ?>">
+                       		 </div>
+                    		</div>
+            			<?php 
+               		 endforeach;
+            		else: 
+                	echo "<div class='text-muted ml-3'>No subjects in this bank.</div>";
+            		endif; 
+           		 ?>
+        		<?php endforeach; ?>
+    			<?php else: ?>
+        			<div class="text-danger">No question banks found. Please add them first.</div>
+    			<?php endif; ?>
+			</div>
+
 
                             <!-- Total Questions -->
                             <div class="mb-3">
