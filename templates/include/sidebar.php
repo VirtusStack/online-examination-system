@@ -1,4 +1,4 @@
-<?php
+<?php 
 // templates/include/sidebar.php
 ?>
 
@@ -52,6 +52,20 @@
         </div>
     </li>
 
+    <!-- Question Bank Subjects -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQBS">
+            <i class="fas fa-fw fa-bookmark"></i>
+            <span>Bank Subjects</span>
+        </a>
+        <div id="collapseQBS" class="collapse" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageQBS">Manage Bank Subjects</a>
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newQBS">Add Bank Subject</a>
+            </div>
+        </div>
+    </li>
+
     <!-- Questions -->
     <li class="nav-item">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQuestions">
@@ -66,25 +80,47 @@
         </div>
     </li>
 
-<!-- Exams -->
-<li class="nav-item">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseExams">
-        <i class="fas fa-fw fa-file-alt"></i>
-        <span>Exams</span>
-    </a>
-    <div id="collapseExams" class="collapse" data-parent="#accordionSidebar">
-        <div class="bg-white py-2 collapse-inner rounded">
-            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageExams">Manage Exams</a>
-            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newExam">Create Exam</a>
+    <!-- Exams -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseExams">
+            <i class="fas fa-fw fa-file-alt"></i>
+            <span>Exams</span>
+        </a>
+        <div id="collapseExams" class="collapse" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageExams">Manage Exams</a>
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newExam">Create Exam</a>
+            </div>
+        </div>
+    </li>
 
-            <!-- Generate Links  -->
-            <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=generateLinks">Generate Exam Links</a>
+    <!-- Classrooms -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseClasses">
+            <i class="fas fa-fw fa-chalkboard"></i>
+            <span>Classrooms</span>
+        </a>
+        <div id="collapseClasses" class="collapse" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageClasses">Manage Classes</a>
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newClassroom">Add Class</a>
+            </div>
+        </div>
+    </li>
 
-             </div>
-    </div>
-</li>
-
-
+    <!-- Students -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseStudents">
+            <i class="fas fa-fw fa-user-graduate"></i>
+            <span>Students</span>
+        </a>
+        <div id="collapseStudents" class="collapse" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=manageStudents">Manage Students</a>
+                <a class="collapse-item" href="<?= BASE_URL ?>/admin.php?action=newStudent">Add Student</a>
+            </div>
+        </div>
+    </li>
 
     <hr class="sidebar-divider d-none d-md-block">
 
