@@ -1,10 +1,10 @@
-<?php
+<?php 
 // /templates/exams/manage_exams.php
-// -------------------------
+// ----------------------------------
 // Displays all exams with Edit/Delete/View actions
-// Includes pagination (Prev/Next + numbered + Go to page)
+// Shows subjects + difficulty percentages
+// Includes pagination
 
-// Ensure $results exists
 $results = $results ?? [
     'pageTitle'   => 'Manage Exams',
     'message'     => '',
@@ -75,7 +75,6 @@ $offset      = ($currentPage - 1) * $perPage;
                                         <th>Duration (min)</th>
                                         <th>Start / End</th>
                                         <th>Status</th>
-                                        <th>Exam Link</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -83,20 +82,38 @@ $offset      = ($currentPage - 1) * $perPage;
                                     <?php if (!empty($exams)): ?>
                                         <?php foreach ($exams as $exam): ?>
                                             <?php
-                                            // Fetch subjects for this exam
+                                            // --- Fetch DISTINCT subjects for this exam
                                             $stmt = $pdo->prepare("
-                                                SELECT s.subject_name 
-                                                FROM exam_question_sources eqs 
+                                                SELECT DISTINCT s.subject_name
+                                                FROM exam_question_sources eqs
                                                 JOIN subjects s ON eqs.subject_id = s.subject_id
                                                 WHERE eqs.exam_id = ?
                                             ");
                                             $stmt->execute([$exam['exam_id']]);
-                                            $subject_names = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                                            $subjectRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                            // --- Get difficulty percentages from exam table
+                                            $easy_pct   = $exam['easy_percentage'] ?? 0;
+                                            $medium_pct = $exam['medium_percentage'] ?? 0;
+                                            $hard_pct   = $exam['hard_percentage'] ?? 0;
+
+                                            // --- Format subjects with percentages
+                                            $subjectList = [];
+                                            foreach ($subjectRows as $row) {
+                                                $subjectList[] = $row['subject_name'] 
+                                                    . " (E {$easy_pct}%, M {$medium_pct}%, H {$hard_pct}%)";
+                                            }
+
+                                            // --- Fetch exam link (first student link for preview)
+                                            $stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
+                                            $stmtLink->execute([$exam['exam_id']]);
+                                            $linkCode = $stmtLink->fetchColumn();
+                                            $fullLink = $linkCode ? BASE_URL . "/student.php?action=startExam&link=" . $linkCode : '';
                                             ?>
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
                                                 <td><?= htmlspecialchars($exam['exam_title']) ?></td>
-                                                <td><?= !empty($subject_names) ? implode(', ', $subject_names) : '-' ?></td>
+                                                <td><?= !empty($subjectList) ? implode(', ', $subjectList) : '-' ?></td>
                                                 <td><?= htmlspecialchars($exam['total_questions'] ?? '-') ?></td>
                                                 <td><?= htmlspecialchars($exam['duration_minutes'] ?? '-') ?></td>
                                                 <td>
@@ -104,45 +121,20 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     <?= !empty($exam['end_time']) ? htmlspecialchars($exam['end_time']) : '-' ?>
                                                 </td>
                                                 <td><?= ($exam['start_time'] <= date('Y-m-d H:i:s') && $exam['end_time'] >= date('Y-m-d H:i:s')) ? 'Active' : 'Inactive' ?></td>
-                                               <td>
-    						<?php
-        					// Fetch exam link code from DB
-        					$stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
-        					$stmtLink->execute([$exam['exam_id']]);
-        					$linkCode = $stmtLink->fetchColumn();
-
-        					// Build full URL for students
-        					$fullLink = $linkCode ? BASE_URL . "/student.php?action=startExam&link=" . $linkCode : '';
-    						?>
-    						<?php if ($fullLink): ?>
-        					  <a href="<?= htmlspecialchars($fullLink) ?>" target="_blank"><?= htmlspecialchars($fullLink) ?></a>
-    						<?php else: ?>
-      						  -
-    						<?php endif; ?>
-						</td>
-
-                                               <td>
-    						<a class="btn btn-sm btn-info me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=viewExam&id=<?= $exam['exam_id'] ?>">
-      						 <i class="bi bi-eye"></i> View
-    						</a>
-
-    					       <a class="btn btn-sm btn-warning me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?=$exam['exam_id'] ?>">
-       						<i class="bi bi-pencil-square"></i> Edit
-    						</a>
-
-    						<form method="get" action="<?= BASE_URL ?>/admin.php" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this exam?');">
-        					<input type="hidden" name="action" value="manageExams">
-        					<input type="hidden" name="delete" value="<?= $exam['exam_id'] ?>">
-        					<button type="submit" class="btn btn-sm btn-danger me-1 mb-1">
-            						<i class="bi bi-trash"></i> Delete
-        					</button>
-    						</form>
-
-    						<a class="btn btn-sm btn-success mb-1" href="<?= BASE_URL ?>/admin.php?action=examLinks&id=<?= $exam['exam_id'] ?>">
-       						<i class="bi bi-link-45deg"></i> Links
-    						</a>
-						</td>
-
+                                                                                                <td>
+                                                   
+                                                    <a class="btn btn-sm btn-warning me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?= $exam['exam_id'] ?>">
+                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                    </a>
+                                                    <form method="get" action="<?= BASE_URL ?>/admin.php" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this exam?');">
+                                                        <input type="hidden" name="action" value="manageExams">
+                                                        <input type="hidden" name="delete" value="<?= $exam['exam_id'] ?>">
+                                                        <button type="submit" class="btn btn-sm btn-danger me-1 mb-1">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                  
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -161,7 +153,6 @@ $offset      = ($currentPage - 1) * $perPage;
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= max(1, $currentPage - 1) ?>">Prev</a>
                                 </li>
-
                                 <?php
                                 $start = max(1, $currentPage - 2);
                                 $end   = min($totalPages, $currentPage + 2);
@@ -170,11 +161,9 @@ $offset      = ($currentPage - 1) * $perPage;
                                         <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= $i ?>"><?= $i ?></a>
                                     </li>
                                 <?php endfor; ?>
-
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link" href="<?= BASE_URL ?>/admin.php?action=manageExams&page=<?= min($totalPages, $currentPage + 1) ?>">Next</a>
                                 </li>
-
                                 <li class="page-item ms-3">
                                     <form method="get" action="<?= BASE_URL ?>/admin.php" class="form-inline">
                                         <input type="hidden" name="action" value="manageExams">
