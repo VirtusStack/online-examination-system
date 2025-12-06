@@ -239,21 +239,6 @@ VALUES
 (161, 3, 8, 'India’s new digital currency launched?', 'Digital Rupee', 'Bitcoin', 'Ethereum', 'Tether', 'A', 1.00, 'Medium')
 ON DUPLICATE KEY UPDATE question_id=question_id;
 
--- -------------------------------
--- Exams
--- -------------------------------
-INSERT INTO `exams` (`exam_id`, `exam_title`, `exam_description`, `total_questions`, `duration_minutes`, `shuffle_questions`, `shuffle_options`, `rules_page`, `start_time`, `end_time`, `passing_marks`, `negative_marking`, `status`, `assign_type`, `assign_data`, `created_at`, `easy_percentage`, `medium_percentage`, `hard_percentage`) VALUES
-(1, 'Science Midterm Exam', 'Covers Physics, Chemistry, Biology', 3, 30, 1, 1, 0, '2025-12-03 12:00:00', '2025-12-03 12:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-03 05:50:17', 0, 0, 0),
-(2, 'Commerce Midterm Exam', 'Covers Accountancy, Economics, Business Studies', 3, 30, 1, 1, 0, '2025-12-03 12:05:00', '2025-12-03 12:35:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-03 06:35:11', 0, 0, 0),
-(3, 'Science Midterm', 'Biology and chemistry', 30, 30, 1, 1, 0, '2025-12-04 14:02:00', '2025-12-04 18:00:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 05:37:44', 0, 0, 0),
-(4, 'GK Midterm Exam', 'Current Affairs and General Knowledge', 30, 30, 1, 1, 0, '2025-12-04 14:00:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 08:31:14', 0, 0, 0),
-(6, 'mix', 'Biology and Gk', 30, 30, 1, 1, 0, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 12:49:58', 0, 0, 0),
-(7, 'Commerce', 'Business Studies and Economics', 30, 30, 1, 1, 0, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 13:39:51', 60, 30, 10),
-(8, 'Science', 'biology and chemistry', 20, 30, 1, 1, 0, '2025-12-05 10:00:00', '2025-12-05 19:34:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 14:04:33', 70, 25, 5),
-(9, 'Science exam', 'Biology and Physics', 20, 30, 1, 1, 0, '2025-12-05 10:30:00', '2025-12-05 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 05:01:10', 60, 30, 10),
-(10, 'Art', 'GK and Current Affairs', 30, 30, 1, 1, 0, '2025-12-05 12:22:00', '2025-12-05 19:28:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 06:53:19', 60, 30, 10)
-ON DUPLICATE KEY UPDATE exam_id=exam_id;
-
 /*
 -- -------------------------------
 -- Exams
@@ -272,7 +257,7 @@ ON DUPLICATE KEY UPDATE exam_id=exam_id;
 
 
 -- -------------------------------
--- Exams Question	
+-- Exams Question Sources	
 -- -------------------------------
 INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `difficulty`, `question_limit`) VALUES
 (30, 1, 1, 3, NULL, 1),
@@ -318,52 +303,103 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (125, 10, 3, 7, 'Hard', 2)
 ON DUPLICATE KEY UPDATE id=id;
 
-
-
 -- -------------------------------
--- Exams
+-- Exam Assigned Student
 -- -------------------------------
-INSERT INTO `exams` (`exam_id`,`exam_title`,`exam_description`,`total_questions`,`duration_minutes`,`shuffle_questions`,`shuffle_options`,`start_time`,`end_time`,`passing_marks`,`negative_marking`,`status`)
-VALUES
-(1,'Math Exam 1','',10,30,1,1,NULL,NULL,0.00,0.00,'Active'),
-(2,'Physics Exam 1','Basic Physics Exam',5,30,1,1,'2025-12-02 10:00:00','2025-12-02 11:00:00',50.00,0.00,'Active'),
-(3,'Chemistry Exam 1','Basic Chemistry Exam',5,30,1,1,'2025-12-03 10:00:00','2025-12-03 11:00:00',50.00,0.00,'Active'),
-(4,'Biology Exam 1','Basic Biology Exam',5,30,1,1,'2025-12-04 10:00:00','2025-12-04 11:00:00',50.00,0.00,'Active'),
-(5,'CS Exam 1','Basic CS Exam',5,30,1,1,'2025-12-05 10:00:00','2025-12-05 11:00:00',50.00,0.00,'Active')
-ON DUPLICATE KEY UPDATE exam_id=exam_id;
-
--- -------------------------------
--- Exam questions
--- -------------------------------
-INSERT INTO `exam_questions` (`id`,`exam_id`,`question_id`)
-VALUES
-(1,1,1),(2,1,2),(3,2,3),(4,2,4),(5,3,5),(6,3,6),(7,4,7),(8,5,8)
+INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
+(41, 1, 1),
+(42, 1, 2),
+(43, 1, 9),
+(44, 1, 10),
+(46, 2, 1),
+(47, 2, 2),
+(48, 2, 9),
+(49, 2, 10),
+(70, 5, 1),
+(71, 5, 2),
+(72, 5, 9),
+(73, 5, 10),
+(74, 4, 1),
+(75, 4, 2),
+(76, 4, 9),
+(77, 4, 10),
+(82, 3, 1),
+(83, 3, 2),
+(84, 3, 9),
+(85, 3, 10),
+(86, 6, 1),
+(87, 6, 2),
+(88, 6, 9),
+(89, 6, 10),
+(98, 9, 1),
+(99, 9, 2),
+(100, 9, 9),
+(101, 9, 10),
+(102, 8, 1),
+(103, 8, 2),
+(104, 8, 9),
+(105, 8, 10),
+(106, 7, 1),
+(107, 7, 2),
+(108, 7, 9),
+(109, 7, 10),
+(114, 10, 1),
+(115, 10, 2),
+(116, 10, 9),
+(117, 10, 10);
 ON DUPLICATE KEY UPDATE id=id;
 
 -- -------------------------------
 -- Exam links
 -- -------------------------------
-INSERT INTO `exam_links` (`link_id`,`exam_id`,`unique_link`,`password`,`student_name`,`student_email`,`student_class`,`expires_at`,`is_used`,`created_at`)
-VALUES
-(1,1,'link1',NULL,'Alice','alice@example.com','10th','2025-12-10 23:59:59',0,NOW()),
-(2,2,'link2',NULL,'Bob','bob@example.com','10th','2025-12-11 23:59:59',0,NOW()),
-(3,3,'link3',NULL,'Charlie','charlie@example.com','10th','2025-12-12 23:59:59',0,NOW()),
-(4,4,'link4',NULL,'David','david@example.com','10th','2025-12-13 23:59:59',0,NOW()),
-(5,5,'link5',NULL,'Eve','eve@example.com','10th','2025-12-14 23:59:59',0,NOW()),
-(6,4,'f4ef69ef55c34b57','pass123','bob','','','2025-12-03 00:00:00',0,NOW()),
-(7,2,'584c99dcbef64050','pass@12','','','bscit','2025-12-04 00:00:00',0,NOW())
-ON DUPLICATE KEY UPDATE link_id=link_id;
+INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `student_name`, `student_email`, `student_class`, `expires_at`, `is_used`, `created_at`) VALUES
+(1, 1, 'exam_692fcf9984a537.76633127', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', 'Alice Smith', 'alice@example.com', NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
+(2, 1, 'exam_692fcf9986ae43.68810739', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
+(3, 1, 'exam_692fcf99875d84.58635436', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', 'Isla Adams', 'isla@example.com', NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
+(4, 1, 'exam_692fcf9987efa9.44783430', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', 'Jack Baker', 'jack@example.com', NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
+(5, 1, 'exam-1-90c560f7', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', NULL, NULL, NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
+(6, 2, 'exam_692fda1f1ba752.47433683', '$2y$10$mmsVVnRXw2JpSzEkv/nEZubgoSaTntmKcIFsi78/YphVCKhvsUkLa', 'Alice Smith', 'alice@example.com', NULL, '2025-12-03 13:07:00', 0, '2025-12-03 06:35:11'),
+(7, 2, 'exam-2-b06d2abe', '$2y$10$mmsVVnRXw2JpSzEkv/nEZubgoSaTntmKcIFsi78/YphVCKhvsUkLa', NULL, NULL, NULL, '2025-12-03 13:07:00', 0, '2025-12-03 06:35:11'),
+(8, 2, 'exam_692fdaaf044c64.50989660', '$2y$10$mmsVVnRXw2JpSzEkv/nEZubgoSaTntmKcIFsi78/YphVCKhvsUkLa', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-03 13:07:00', 0, '2025-12-03 06:37:35'),
+(9, 2, 'exam_692fdaaf058051.62156593', '$2y$10$mmsVVnRXw2JpSzEkv/nEZubgoSaTntmKcIFsi78/YphVCKhvsUkLa', 'Isla Adams', 'isla@example.com', NULL, '2025-12-03 13:07:00', 0, '2025-12-03 06:37:35'),
+(10, 2, 'exam_692fdaaf06a1e7.06203442', '$2y$10$mmsVVnRXw2JpSzEkv/nEZubgoSaTntmKcIFsi78/YphVCKhvsUkLa', 'Jack Baker', 'jack@example.com', NULL, '2025-12-03 13:07:00', 0, '2025-12-03 06:37:35'),
+(11, 3, 'exam_69311e280c96f4.17571917', '$2y$10$h7kjpmMBg/hhgFxMayly8OQUZIcz1gt2DWmDuVHmIhceQf.zKSnvm', 'Alice Smith', 'alice@example.com', NULL, '2025-12-04 19:30:00', 0, '2025-12-04 05:37:44'),
+(12, 3, 'exam_69311e280d6bb3.99862612', '$2y$10$h7kjpmMBg/hhgFxMayly8OQUZIcz1gt2DWmDuVHmIhceQf.zKSnvm', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-04 19:30:00', 0, '2025-12-04 05:37:44'),
+(13, 3, 'exam_69311e280ea7a4.79907493', '$2y$10$h7kjpmMBg/hhgFxMayly8OQUZIcz1gt2DWmDuVHmIhceQf.zKSnvm', 'Isla Adams', 'isla@example.com', NULL, '2025-12-04 19:30:00', 0, '2025-12-04 05:37:44'),
+(14, 3, 'exam_69311e280f6956.66697445', '$2y$10$h7kjpmMBg/hhgFxMayly8OQUZIcz1gt2DWmDuVHmIhceQf.zKSnvm', 'Jack Baker', 'jack@example.com', NULL, '2025-12-04 19:30:00', 0, '2025-12-04 05:37:44'),
+(15, 3, 'exam-3-7986e524', '$2y$10$h7kjpmMBg/hhgFxMayly8OQUZIcz1gt2DWmDuVHmIhceQf.zKSnvm', NULL, NULL, NULL, '2025-12-04 19:30:00', 0, '2025-12-04 05:37:44'),
+(16, 4, 'exam_693146d2c23fd8.96082513', '$2y$10$CKfKzu6SpmJHZyA2HBdSRelKHbKkhfLXSePadkmEvHE.mnZfHn4Jq', 'Alice Smith', 'alice@example.com', NULL, '2025-12-04 19:36:00', 0, '2025-12-04 08:31:14'),
+(17, 4, 'exam_693146d2c3b011.13586377', '$2y$10$CKfKzu6SpmJHZyA2HBdSRelKHbKkhfLXSePadkmEvHE.mnZfHn4Jq', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-04 19:36:00', 0, '2025-12-04 08:31:14'),
+(18, 4, 'exam_693146d2c4bfc8.17044816', '$2y$10$CKfKzu6SpmJHZyA2HBdSRelKHbKkhfLXSePadkmEvHE.mnZfHn4Jq', 'Isla Adams', 'isla@example.com', NULL, '2025-12-04 19:36:00', 0, '2025-12-04 08:31:14'),
+(19, 4, 'exam_693146d2c5f450.62745054', '$2y$10$CKfKzu6SpmJHZyA2HBdSRelKHbKkhfLXSePadkmEvHE.mnZfHn4Jq', 'Jack Baker', 'jack@example.com', NULL, '2025-12-04 19:36:00', 0, '2025-12-04 08:31:14'),
+(20, 4, 'exam-4-fd078b88', '$2y$10$CKfKzu6SpmJHZyA2HBdSRelKHbKkhfLXSePadkmEvHE.mnZfHn4Jq', NULL, NULL, NULL, '2025-12-04 19:36:00', 0, '2025-12-04 08:31:15'),
+(26, 6, 'exam_693183769d73f8.25339927', NULL, 'Alice Smith', 'alice@example.com', NULL, NULL, 0, '2025-12-04 12:49:58'),
+(27, 6, 'exam_693183769f0703.49855114', NULL, 'Bob Johnson', 'bob@example.com', NULL, NULL, 0, '2025-12-04 12:49:58'),
+(28, 6, 'exam_69318376a023a3.77213354', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-04 12:49:58'),
+(29, 6, 'exam_69318376a22ec9.35373299', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-04 12:49:58'),
+(30, 6, 'exam-6-fa910817', '$2y$10$YT5qYRwTHrPwmMgQzot5FeU1kMoKJDTngY5NsKgH8pbLIr93gRi3m', NULL, NULL, NULL, '2025-12-04 19:30:00', 0, '2025-12-04 12:49:58'),
+(31, 7, 'exam_69318f276d5d98.80552294', NULL, 'Alice Smith', 'alice@example.com', NULL, NULL, 0, '2025-12-04 13:39:51'),
+(32, 7, 'exam_69318f276f1c07.96629835', NULL, 'Bob Johnson', 'bob@example.com', NULL, NULL, 0, '2025-12-04 13:39:51'),
+(33, 7, 'exam_69318f27704447.67883235', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-04 13:39:51'),
+(34, 7, 'exam_69318f277266e9.47907509', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-04 13:39:51'),
+(35, 7, 'exam-7-eea92ca9', '$2y$10$AClev0iGumtHS28FndZZ9.v6k0CQg4qivjh8v8U72V25vofdyxxra', NULL, NULL, NULL, '2025-12-04 19:30:00', 0, '2025-12-04 13:39:51'),
+(36, 8, 'exam_693194f171d2d6.38351520', NULL, 'Alice Smith', 'alice@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
+(37, 8, 'exam_693194f173cd51.29926238', NULL, 'Bob Johnson', 'bob@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
+(38, 8, 'exam_693194f1751183.86502391', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
+(39, 8, 'exam_693194f176cd16.26821545', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
+(40, 8, 'exam-8-bbe47086', '$2y$10$Z2tTEmCGrHY7MeyvkNo1COM0r/4sWp9VHzmzCtFE8vFE4fC/VfxBa', NULL, NULL, NULL, '2025-12-05 19:34:00', 0, '2025-12-04 14:04:33'),
+(41, 9, 'exam_69326716561ea0.90367878', NULL, 'Alice Smith', 'alice@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
+(42, 9, 'exam_69326716573042.16669386', NULL, 'Bob Johnson', 'bob@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
+(43, 9, 'exam_693267165892b6.32140913', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
+(44, 9, 'exam_6932671659c5f5.33948213', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
+(45, 9, 'exam-9-92f9121b', '$2y$10$3qa8axhB446Q40mqw1Rie.IEk1E2Hwkiwg.lPQEfW6IVH60kzh6Fq', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 05:01:10'),
+(46, 10, 'exam_6932815f12bd53.97690333', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Alice Smith', 'alice@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
+(47, 10, 'exam_6932815f140814.35878927', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
+(48, 10, 'exam_6932815f1526a2.55460779', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Isla Adams', 'isla@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
+(49, 10, 'exam_6932815f16f185.17585246', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Jack Baker', 'jack@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
+(50, 10, 'exam-10-8045503c', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19')
+ON DUPLICATE KEY UPDATE link_id=link_id;   */
 
 
--- -------------------------------
--- Exam question sources
--- -------------------------------
-INSERT INTO `exam_question_sources` (`id`,`exam_id`,`bank_id`,`subject_id`,`difficulty`,`question_limit`)
-VALUES
-(1,1,1,1,'Easy',2),
-(2,2,2,2,'Medium',2),
-(3,3,3,3,'Easy',2),
-(4,4,4,4,'Medium',2),
-(5,5,5,5,'Easy',2)
-ON DUPLICATE KEY UPDATE id=id;*/
+
 
