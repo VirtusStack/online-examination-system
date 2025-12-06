@@ -147,4 +147,49 @@ const countdown = setInterval(() => {
         document.getElementById('examForm').submit();
     }
 }, 1000);
+
+/* -----------------------------------------------------------
+   TAB SWITCH PROTECTION
+   - Detect when user switches tabs or minimizes
+   - Show warning popup
+   - After 3 violations → auto-submit exam
+------------------------------------------------------------ */
+
+let switchCount = 0;
+const maxSwitchAllowed = 3;
+
+// Create warning box
+function showWarning(msg) {
+    let div = document.createElement("div");
+    div.style.position = "fixed";
+    div.style.top = "20px";
+    div.style.right = "20px";
+    div.style.zIndex = "9999";
+    div.style.padding = "15px 20px";
+    div.style.background = "#ff4444";
+    div.style.color = "#fff";
+    div.style.borderRadius = "6px";
+    div.style.fontSize = "16px";
+    div.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+    div.textContent = msg;
+
+    document.body.appendChild(div);
+
+    setTimeout(() => { div.remove(); }, 3000);
+}
+
+// Listen for tab switching / minimize
+document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+        switchCount++;
+
+        showWarning("⚠ Warning: You switched tabs! (" + switchCount + "/" + maxSwitchAllowed + ")");
+
+        if (switchCount >= maxSwitchAllowed) {
+            alert("You switched tabs too many times! The exam will now be submitted.");
+            document.getElementById("examForm").submit();
+        }
+    }
+});
+
 </script>
