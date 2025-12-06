@@ -77,8 +77,8 @@ INSERT INTO `exams` (`exam_id`, `exam_title`, `exam_description`, `total_questio
 (6, 'mix', 'Biology and Gk', 30, 30, 1, 1, 0, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 12:49:58', 0, 0, 0),
 (7, 'Commerce', 'Business Studies and Economics', 30, 30, 1, 1, 0, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 13:39:51', 60, 30, 10),
 (8, 'Science', 'biology and chemistry', 20, 30, 1, 1, 0, '2025-12-05 10:00:00', '2025-12-05 19:34:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 14:04:33', 70, 25, 5),
-(9, 'Science exam', 'Biology and Physics', 20, 30, 1, 1, 0, '2025-12-05 10:30:00', '2025-12-05 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 05:01:10', 60, 30, 10),
-(10, 'Art', 'GK and Current Affairs', 30, 30, 1, 1, 0, '2025-12-05 12:22:00', '2025-12-05 19:28:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 06:53:19', 60, 30, 10);
+(9, 'Science exam', 'Biology and Physics', 20, 30, 1, 1, 0, '2025-12-06 10:30:00', '2025-12-06 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 05:01:10', 60, 30, 10),
+(10, 'Art', 'GK and Current Affairs', 30, 30, 1, 1, 0, '2025-12-06 10:22:00', '2025-12-06 19:28:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 06:53:19', 60, 30, 10);
 
 -- --------------------------------------------------------
 
@@ -174,10 +174,6 @@ INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
 (87, 6, 2),
 (88, 6, 9),
 (89, 6, 10),
-(98, 9, 1),
-(99, 9, 2),
-(100, 9, 9),
-(101, 9, 10),
 (102, 8, 1),
 (103, 8, 2),
 (104, 8, 9),
@@ -186,10 +182,14 @@ INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
 (107, 7, 2),
 (108, 7, 9),
 (109, 7, 10),
-(114, 10, 1),
-(115, 10, 2),
-(116, 10, 9),
-(117, 10, 10);
+(118, 10, 1),
+(119, 10, 2),
+(120, 10, 9),
+(121, 10, 10),
+(122, 9, 1),
+(123, 9, 2),
+(124, 9, 9),
+(125, 9, 10);
 
 -- --------------------------------------------------------
 
@@ -250,16 +250,16 @@ INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `stud
 (38, 8, 'exam_693194f1751183.86502391', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
 (39, 8, 'exam_693194f176cd16.26821545', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-04 14:04:33'),
 (40, 8, 'exam-8-bbe47086', '$2y$10$Z2tTEmCGrHY7MeyvkNo1COM0r/4sWp9VHzmzCtFE8vFE4fC/VfxBa', NULL, NULL, NULL, '2025-12-05 19:34:00', 0, '2025-12-04 14:04:33'),
-(41, 9, 'exam_69326716561ea0.90367878', NULL, 'Alice Smith', 'alice@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
-(42, 9, 'exam_69326716573042.16669386', NULL, 'Bob Johnson', 'bob@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
-(43, 9, 'exam_693267165892b6.32140913', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
-(44, 9, 'exam_6932671659c5f5.33948213', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
-(45, 9, 'exam-9-92f9121b', '$2y$10$3qa8axhB446Q40mqw1Rie.IEk1E2Hwkiwg.lPQEfW6IVH60kzh6Fq', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 05:01:10'),
-(46, 10, 'exam_6932815f12bd53.97690333', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Alice Smith', 'alice@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(47, 10, 'exam_6932815f140814.35878927', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(48, 10, 'exam_6932815f1526a2.55460779', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Isla Adams', 'isla@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(49, 10, 'exam_6932815f16f185.17585246', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Jack Baker', 'jack@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(50, 10, 'exam-10-8045503c', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19');
+(41, 9, 'exam_69326716561ea0.90367878', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Alice Smith', 'alice@example.com', NULL, '2025-12-06 19:00:00', 0, '2025-12-05 05:01:10'),
+(42, 9, 'exam_69326716573042.16669386', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-06 19:00:00', 0, '2025-12-05 05:01:10'),
+(43, 9, 'exam_693267165892b6.32140913', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Isla Adams', 'isla@example.com', NULL, '2025-12-06 19:00:00', 0, '2025-12-05 05:01:10'),
+(44, 9, 'exam_6932671659c5f5.33948213', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Jack Baker', 'jack@example.com', NULL, '2025-12-06 19:00:00', 0, '2025-12-05 05:01:10'),
+(45, 9, 'exam-9-92f9121b', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', NULL, NULL, NULL, '2025-12-06 19:00:00', 0, '2025-12-05 05:01:10'),
+(46, 10, 'exam_6932815f12bd53.97690333', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Alice Smith', 'alice@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(47, 10, 'exam_6932815f140814.35878927', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(48, 10, 'exam_6932815f1526a2.55460779', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Isla Adams', 'isla@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(49, 10, 'exam_6932815f16f185.17585246', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Jack Baker', 'jack@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(50, 10, 'exam-10-8045503c', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', NULL, NULL, NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19');
 
 -- --------------------------------------------------------
 
@@ -372,12 +372,6 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (81, 6, 1, 3, 'Easy', 9),
 (82, 6, 1, 3, 'Medium', 4),
 (83, 6, 1, 3, 'Hard', 2),
-(96, 9, 1, 3, 'Easy', 6),
-(97, 9, 1, 3, 'Medium', 3),
-(98, 9, 1, 3, 'Hard', 1),
-(99, 9, 1, 1, 'Easy', 6),
-(100, 9, 1, 1, 'Medium', 3),
-(101, 9, 1, 1, 'Hard', 1),
 (102, 8, 1, 3, 'Easy', 7),
 (103, 8, 1, 3, 'Medium', 2),
 (104, 8, 1, 3, 'Hard', 1),
@@ -390,12 +384,18 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (111, 7, 2, 5, 'Easy', 9),
 (112, 7, 2, 5, 'Medium', 4),
 (113, 7, 2, 5, 'Hard', 2),
-(120, 10, 3, 8, 'Easy', 9),
-(121, 10, 3, 8, 'Medium', 4),
-(122, 10, 3, 8, 'Hard', 2),
-(123, 10, 3, 7, 'Easy', 9),
-(124, 10, 3, 7, 'Medium', 4),
-(125, 10, 3, 7, 'Hard', 2);
+(126, 10, 3, 8, 'Easy', 9),
+(127, 10, 3, 8, 'Medium', 4),
+(128, 10, 3, 8, 'Hard', 2),
+(129, 10, 3, 7, 'Easy', 9),
+(130, 10, 3, 7, 'Medium', 4),
+(131, 10, 3, 7, 'Hard', 2),
+(132, 9, 1, 3, 'Easy', 6),
+(133, 9, 1, 3, 'Medium', 3),
+(134, 9, 1, 3, 'Hard', 1),
+(135, 9, 1, 1, 'Easy', 6),
+(136, 9, 1, 1, 'Medium', 3),
+(137, 9, 1, 1, 'Hard', 1);
 
 -- --------------------------------------------------------
 
@@ -857,7 +857,7 @@ ALTER TABLE `exam_answers`
 -- AUTO_INCREMENT for table `exam_assigned_students`
 --
 ALTER TABLE `exam_assigned_students`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=118;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
 -- AUTO_INCREMENT for table `exam_links`
@@ -875,7 +875,7 @@ ALTER TABLE `exam_questions`
 -- AUTO_INCREMENT for table `exam_question_sources`
 --
 ALTER TABLE `exam_question_sources`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=138;
 
 --
 -- AUTO_INCREMENT for table `exam_results`
