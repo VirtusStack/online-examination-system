@@ -1,5 +1,7 @@
+
 INSERT INTO `admin` (`admin_id`, `name`, `email`, `password_hash`, `created_at`) VALUES
 (1, 'admin', 'admin@12.com', '$2y$10$T3g4wVh2ygCCvDPKOiTeteYmGB6RbLtSTpWN25/glk0z8EnF3vVVS', '0000-00-00 00:00:00');
+
 
 
 INSERT INTO `classrooms` (`class_id`, `class_name`) VALUES
@@ -9,7 +11,9 @@ INSERT INTO `classrooms` (`class_id`, `class_name`) VALUES
 (4, 'Class D'),
 (5, 'Class E');
 
-
+--
+-- Dumping data for table `exams`
+--
 
 INSERT INTO `exams` (`exam_id`, `exam_title`, `exam_description`, `total_questions`, `duration_minutes`, `shuffle_questions`, `shuffle_options`, `rules_page`, `start_time`, `end_time`, `passing_marks`, `negative_marking`, `status`, `assign_type`, `assign_data`, `created_at`, `easy_percentage`, `medium_percentage`, `hard_percentage`) VALUES
 (1, 'Science Midterm Exam', 'Covers Physics, Chemistry, Biology', 3, 30, 1, 1, 0, '2025-12-03 12:00:00', '2025-12-03 12:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-03 05:50:17', 0, 0, 0),
@@ -20,8 +24,11 @@ INSERT INTO `exams` (`exam_id`, `exam_title`, `exam_description`, `total_questio
 (7, 'Commerce', 'Business Studies and Economics', 30, 30, 1, 1, 0, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 13:39:51', 60, 30, 10),
 (8, 'Science', 'biology and chemistry', 20, 30, 1, 1, 0, '2025-12-05 10:00:00', '2025-12-05 19:34:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-04 14:04:33', 70, 25, 5),
 (9, 'Science exam', 'Biology and Physics', 20, 30, 1, 1, 0, '2025-12-05 10:30:00', '2025-12-05 19:30:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 05:01:10', 60, 30, 10),
-(10, 'Art', 'GK and Current Affairs', 30, 30, 1, 1, 0, '2025-12-05 12:22:00', '2025-12-05 19:28:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 06:53:19', 60, 30, 10);
+(10, 'Art', 'GK and Current Affairs', 30, 30, 1, 1, 0, '2025-12-06 10:22:00', '2025-12-06 19:28:00', 0.00, 0.00, 'Inactive', 'class', NULL, '2025-12-05 06:53:19', 60, 30, 10);
 
+--
+-- Dumping data for table `exam_answers`
+--
 
 INSERT INTO `exam_answers` (`id`, `result_id`, `question_id`, `selected_option`, `is_correct`) VALUES
 (1, 1, 59, 'A', 1),
@@ -57,6 +64,7 @@ INSERT INTO `exam_answers` (`id`, `result_id`, `question_id`, `selected_option`,
 (31, 3, 2, 'A', 1),
 (32, 3, 19, 'A', 1),
 (33, 3, 3, 'A', 1);
+
 
 
 INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
@@ -96,10 +104,12 @@ INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
 (107, 7, 2),
 (108, 7, 9),
 (109, 7, 10),
-(114, 10, 1),
-(115, 10, 2),
-(116, 10, 9),
-(117, 10, 10);
+(118, 10, 1),
+(119, 10, 2),
+(120, 10, 9),
+(121, 10, 10);
+
+
 
 INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `student_name`, `student_email`, `student_class`, `expires_at`, `is_used`, `created_at`) VALUES
 (1, 1, 'exam_692fcf9984a537.76633127', '$2y$10$QUau.v/Iu6LpWwPRlLkDd.KZe0b9Zo8vARXs.haxi0poenTa2tKAG', 'Alice Smith', 'alice@example.com', NULL, '2025-12-03 12:32:00', 0, '2025-12-03 05:50:17'),
@@ -142,11 +152,13 @@ INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `stud
 (43, 9, 'exam_693267165892b6.32140913', NULL, 'Isla Adams', 'isla@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
 (44, 9, 'exam_6932671659c5f5.33948213', NULL, 'Jack Baker', 'jack@example.com', NULL, NULL, 0, '2025-12-05 05:01:10'),
 (45, 9, 'exam-9-92f9121b', '$2y$10$3qa8axhB446Q40mqw1Rie.IEk1E2Hwkiwg.lPQEfW6IVH60kzh6Fq', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 05:01:10'),
-(46, 10, 'exam_6932815f12bd53.97690333', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Alice Smith', 'alice@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(47, 10, 'exam_6932815f140814.35878927', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(48, 10, 'exam_6932815f1526a2.55460779', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Isla Adams', 'isla@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(49, 10, 'exam_6932815f16f185.17585246', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', 'Jack Baker', 'jack@example.com', NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19'),
-(50, 10, 'exam-10-8045503c', '$2y$10$gLXvcKTLn.Bh2fVqCvaBVOC9.qf6my/4JebRZVZPb01Xaj4pErxAK', NULL, NULL, NULL, '2025-12-05 19:30:00', 0, '2025-12-05 06:53:19');
+(46, 10, 'exam_6932815f12bd53.97690333', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Alice Smith', 'alice@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(47, 10, 'exam_6932815f140814.35878927', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(48, 10, 'exam_6932815f1526a2.55460779', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Isla Adams', 'isla@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(49, 10, 'exam_6932815f16f185.17585246', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', 'Jack Baker', 'jack@example.com', NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19'),
+(50, 10, 'exam-10-8045503c', '$2y$10$6R8PFbL45qK.nwi2RmkFcOmWT0wpJNK9xo2sQtcviE0tC2QxV8eIO', NULL, NULL, NULL, '2025-12-06 19:30:00', 0, '2025-12-05 06:53:19');
+
+
 
 INSERT INTO `exam_questions` (`id`, `exam_id`, `question_id`) VALUES
 (27, 1, 53),
@@ -207,6 +219,7 @@ INSERT INTO `exam_questions` (`id`, `exam_id`, `question_id`) VALUES
 (766, 3, 13);
 
 
+
 INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `difficulty`, `question_limit`) VALUES
 (30, 1, 1, 3, NULL, 1),
 (31, 1, 1, 2, NULL, 1),
@@ -243,18 +256,20 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (111, 7, 2, 5, 'Easy', 9),
 (112, 7, 2, 5, 'Medium', 4),
 (113, 7, 2, 5, 'Hard', 2),
-(120, 10, 3, 8, 'Easy', 9),
-(121, 10, 3, 8, 'Medium', 4),
-(122, 10, 3, 8, 'Hard', 2),
-(123, 10, 3, 7, 'Easy', 9),
-(124, 10, 3, 7, 'Medium', 4),
-(125, 10, 3, 7, 'Hard', 2);
+(126, 10, 3, 8, 'Easy', 9),
+(127, 10, 3, 8, 'Medium', 4),
+(128, 10, 3, 8, 'Hard', 2),
+(129, 10, 3, 7, 'Easy', 9),
+(130, 10, 3, 7, 'Medium', 4),
+(131, 10, 3, 7, 'Hard', 2);
+
 
 
 INSERT INTO `exam_results` (`result_id`, `link_id`, `exam_id`, `student_name`, `student_email`, `total_marks`, `obtained_marks`, `started_at`, `submitted_at`) VALUES
 (1, 1, 1, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-03 11:25:38', '2025-12-03 11:25:38'),
 (2, 6, 2, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-03 12:14:57', '2025-12-03 12:14:57'),
 (3, 11, 3, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-04 16:48:22', '2025-12-04 16:48:22');
+
 
 
 INSERT INTO `questions` (`question_id`, `bank_id`, `subject_id`, `question_text`, `option_a`, `option_b`, `option_c`, `option_d`, `correct_option`, `marks_per_question`, `difficulty`) VALUES
@@ -420,11 +435,18 @@ INSERT INTO `questions` (`question_id`, `bank_id`, `subject_id`, `question_text`
 (160, 3, 8, 'Which country legalized electric vehicles target by 2030?', 'Norway', 'USA', 'India', 'China', 'A', 1.00, 'Easy'),
 (161, 3, 8, 'India’s new digital currency launched?', 'Digital Rupee', 'Bitcoin', 'Ethereum', 'Tether', 'A', 1.00, 'Medium');
 
+--
+-- Dumping data for table `question_banks`
+--
+
 INSERT INTO `question_banks` (`bank_id`, `bank_name`, `description`, `created_at`) VALUES
 (1, 'Science Bank', 'Covers Physics, Chemistry, Biology for 11th & 12th', '2025-12-03 05:04:16'),
 (2, 'Commerce Bank', 'Covers Accounts, Economics, Business Studies', '2025-12-03 05:04:16'),
 (3, 'General Knowledge Bank', 'Covers GK & Current Affairs', '2025-12-03 05:04:16');
 
+--
+-- Dumping data for table `question_bank_subjects`
+--
 
 INSERT INTO `question_bank_subjects` (`id`, `bank_id`, `subject_id`) VALUES
 (1, 1, 1),
@@ -436,6 +458,9 @@ INSERT INTO `question_bank_subjects` (`id`, `bank_id`, `subject_id`) VALUES
 (7, 3, 7),
 (8, 3, 8);
 
+--
+-- Dumping data for table `students`
+--
 
 INSERT INTO `students` (`student_id`, `name`, `email`, `password_hash`, `roll_no`, `section`, `phone`, `status`, `class_id`) VALUES
 (1, 'Alice Smith', 'alice@example.com', '$2y$10$7j8dFZiGN2oq7yInVX/jjOabkz2L8G4tN77M4zNIXDl/GV5gQHIGa', 'R101', 'A', '2474787989', 'Active', 1),
@@ -449,6 +474,9 @@ INSERT INTO `students` (`student_id`, `name`, `email`, `password_hash`, `roll_no
 (9, 'Isla Adams', 'isla@example.com', '$2y$10$3i0F.QW8nvrluIffAUaCIO.dVROwaiNFYiiKgtg67Z.pRLduNLgr.', 'R109', 'A', '9237223367', 'Active', 1),
 (10, 'Jack Baker', 'jack@example.com', '$2y$10$apxAwVmNVZ7conlco5yz7.jB9EP/dne.V4aBdaGOam6UbNO8QO6z6', 'R110', 'A', '982233778', 'Active', 1);
 
+--
+-- Dumping data for table `subjects`
+--
 
 INSERT INTO `subjects` (`subject_id`, `subject_name`, `description`, `created_at`) VALUES
 (1, 'Physics', 'Mechanics, Waves, EM, Modern Physics', '2024-01-11 18:30:00'),
@@ -459,3 +487,4 @@ INSERT INTO `subjects` (`subject_id`, `subject_name`, `description`, `created_at
 (6, 'Business Studies', 'Management, Marketing, Finance', '2024-02-05 18:30:00'),
 (7, 'General Knowledge', 'Static GK, Geography, Polity, History', '2024-02-29 18:30:00'),
 (8, 'Current Affairs', 'Latest National & International news', '2025-12-03 05:18:29');
+COMMIT;
