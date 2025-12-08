@@ -71,7 +71,10 @@ include __DIR__ . "/header.php";
                                 <div class="d-flex justify-content-between mt-4">
                                     <button type="button" id="prevBtn" class="btn btn-secondary">Previous</button>
                                     <button type="button" id="nextBtn" class="btn btn-primary">Next</button>
-                                    <button type="submit" id="submitBtn" class="btn btn-success d-none">Submit Exam</button>
+                                    <button type="submit" id="submitBtn" class="btn btn-success d-none"
+        onclick="examSubmitted = true;">
+    Submit Exam
+</button>
                                 </div>
 
                             </form>
@@ -91,105 +94,142 @@ include __DIR__ . "/header.php";
 </div>
 <!-- End of Content Wrapper -->
 
-<!-- JS for question navigation (5 per page) and timer -->
 <script>
-let currentIndex = 0; // Tracks the first question of the current page
-const totalQuestions = <?= count($questions); ?>;
-const questionBlocks = document.querySelectorAll('.question-block');
-const pageSize = 5; // 5 questions per page
-
-// Function to show a page of questions
-function showQuestions(start) {
-    questionBlocks.forEach((block, i) => {
-        block.classList.toggle('d-none', i < start || i >= start + pageSize);
-    });
-
-    // Update page number display
-    document.getElementById('currentQuestion').textContent = start + 1;
-    document.getElementById('currentQuestionEnd').textContent = Math.min(start + pageSize, totalQuestions);
-
-    // Show/hide buttons
-    document.getElementById('prevBtn').style.display = start === 0 ? 'none' : 'inline-block';
-    document.getElementById('nextBtn').style.display = start + pageSize >= totalQuestions ? 'none' : 'inline-block';
-    document.getElementById('submitBtn').classList.toggle('d-none', start + pageSize < totalQuestions);
+// ------------------------------
+// Prevent multiple tabs
+// ------------------------------
+if (sessionStorage.getItem('exam_live_lock')) {
+    alert("⚠ Exam already running in another tab. This tab will be blocked.");
+    window.location.href = 'student.php';
+} else {
+    sessionStorage.setItem('exam_live_lock', '1');
 }
-
-// Previous/Next button click handlers
-document.getElementById('prevBtn').addEventListener('click', () => {
-    if (currentIndex > 0) {
-        currentIndex -= pageSize;
-        if (currentIndex < 0) currentIndex = 0;
-        showQuestions(currentIndex);
-    }
+window.addEventListener('beforeunload', function() {
+    sessionStorage.removeItem('exam_live_lock');
 });
 
-document.getElementById('nextBtn').addEventListener('click', () => {
-    if (currentIndex + pageSize < totalQuestions) {
-        currentIndex += pageSize;
-        showQuestions(currentIndex);
-    }
+// ------------------------------
+// Disable right-click & copy/paste/print
+// ------------------------------
+document.addEventListener('contextmenu', e => e.preventDefault());
+['copy','paste','cut','beforeprint','print'].forEach(evt => {
+    window.addEventListener(evt, e => e.preventDefault());
 });
 
-// Initialize first page
-showQuestions(currentIndex);
+// ------------------------------
+// Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, F5, Ctrl+R
+// ------------------------------
+document.onkeydown = function(e) {
+    if (
+        e.keyCode === 123 ||                        
+        (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+        (e.ctrlKey && e.key === 'U') ||             
+        (e.ctrlKey && e.key === 'S') ||             
+        e.keyCode === 116 ||                        
+        (e.ctrlKey && e.key === 'R')                
+    ) { e.preventDefault(); return false; }
+};
 
-// Timer countdown
-let duration = <?= intval($exam['duration_minutes'] ?? 30); ?> * 60; // seconds
-const timerEl = document.getElementById('timer');
+// ------------------------------
+// Prevent back button
+// ------------------------------
+history.pushState(null, null, location.href);
+window.onpopstate = function() { history.go(1); };
 
-const countdown = setInterval(() => {
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    timerEl.textContent = minutes + ":" + (seconds < 10 ? '0' + seconds : seconds);
-    if (--duration < 0) {
-        clearInterval(countdown);
-        alert('Time is up! Submitting exam...');
-        document.getElementById('examForm').submit();
-    }
-}, 1000);
-
-/* -----------------------------------------------------------
-   TAB SWITCH PROTECTION
-   - Detect when user switches tabs or minimizes
-   - Show warning popup
-   - After 3 violations → auto-submit exam
------------------------------------------------------------- */
-
+// ------------------------------
+// Detect tab switching
+// ------------------------------
 let switchCount = 0;
-const maxSwitchAllowed = 3;
-
-// Create warning box
-function showWarning(msg) {
-    let div = document.createElement("div");
-    div.style.position = "fixed";
-    div.style.top = "20px";
-    div.style.right = "20px";
-    div.style.zIndex = "9999";
-    div.style.padding = "15px 20px";
-    div.style.background = "#ff4444";
-    div.style.color = "#fff";
-    div.style.borderRadius = "6px";
-    div.style.fontSize = "16px";
-    div.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-    div.textContent = msg;
-
-    document.body.appendChild(div);
-
-    setTimeout(() => { div.remove(); }, 3000);
-}
-
-// Listen for tab switching / minimize
-document.addEventListener("visibilitychange", function () {
+document.addEventListener("visibilitychange", function() {
     if (document.hidden) {
         switchCount++;
-
-        showWarning("⚠ Warning: You switched tabs! (" + switchCount + "/" + maxSwitchAllowed + ")");
-
-        if (switchCount >= maxSwitchAllowed) {
-            alert("You switched tabs too many times! The exam will now be submitted.");
+        alert("⚠ Please do not switch tabs during the exam!");
+        if (switchCount >= 3) {
+            alert("Exam auto-submitted due to repeated tab switching.");
             document.getElementById("examForm").submit();
         }
     }
 });
 
+// ------------------------------
+// Detect DevTools
+// ------------------------------
+setInterval(function() {
+    const before = new Date().getTime();
+    debugger;
+    const after = new Date().getTime();
+    if (after - before > 100) {
+        alert("⚠ DevTools detected! Exam will be auto-submitted.");
+        document.getElementById("examForm").submit();
+    }
+}, 1000);
+
+// ------------------------------
+// Detect PrintScreen
+// ------------------------------
+document.addEventListener("keyup", (e) => {
+    if (e.key === "PrintScreen") alert("Screenshots are not allowed!");
+});
+
+// ------------------------------
+// Disable refresh/reload
+// ------------------------------
+window.onbeforeunload = function() {
+    return "Exam in progress. Reloading will submit your exam.";
+};
+
+// ------------------------------
+// Question Navigation
+// ------------------------------
+let currentIndex = 0;
+const totalQuestions = <?= count($questions); ?>;
+const questionBlocks = document.querySelectorAll('.question-block');
+const pageSize = 5;
+
+function showQuestions(start) {
+    questionBlocks.forEach((block, i) => block.classList.toggle('d-none', i < start || i >= start + pageSize));
+    document.getElementById('currentQuestion').textContent = start + 1;
+    document.getElementById('currentQuestionEnd').textContent = Math.min(start + pageSize, totalQuestions);
+    document.getElementById('prevBtn').style.display = start === 0 ? 'none' : 'inline-block';
+    document.getElementById('nextBtn').style.display = start + pageSize >= totalQuestions ? 'none' : 'inline-block';
+    document.getElementById('submitBtn').classList.toggle('d-none', start + pageSize < totalQuestions);
+}
+
+document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentIndex > 0) { currentIndex -= pageSize; if (currentIndex < 0) currentIndex = 0; showQuestions(currentIndex); }
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (currentIndex + pageSize < totalQuestions) { currentIndex += pageSize; showQuestions(currentIndex); }
+});
+
+showQuestions(currentIndex);
+
+// ------------------------------
+// UPDATED TIMER LOGIC
+// ------------------------------
+let examSubmitted = false;  // <--- ADDED
+
+// Add this in your submit button:
+// onclick="examSubmitted = true;"
+
+let duration = <?= intval($exam['duration_minutes'] ?? 30); ?> * 60;
+const timerEl = document.getElementById('timer');
+
+const countdown = setInterval(() => {
+    if (examSubmitted) {
+        clearInterval(countdown);
+        return;
+    }
+
+    const minutes = Math.floor(duration / 60);
+    const seconds = duration % 60;
+    timerEl.textContent = minutes + ":" + (seconds < 10 ? '0'+seconds : seconds);
+
+    if (--duration < 0) {
+        clearInterval(countdown);
+        if (!examSubmitted) {
+            document.getElementById('examForm').submit(); // <--- No alert, only auto-submit
+        }
+    }
+}, 1000);
 </script>
