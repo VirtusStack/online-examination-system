@@ -38,6 +38,14 @@ require_once __DIR__ . '/../../config/config.php';
                             <input type="password" name="password" class="form-control" required>
                         </div>
 
+			<!-- Remember Me checkbox -->
+                        <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="remember_me" id="remember_me" value="1">
+                        <label class="form-check-label" for="remember_me">
+                         Remember Me
+                         </label>
+                        </div>
+
                         <!-- Submit -->
                         <button type="submit" class="btn btn-primary btn-block">
                             Login
