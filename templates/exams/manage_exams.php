@@ -75,6 +75,7 @@ $offset      = ($currentPage - 1) * $perPage;
                                         <th>Duration (min)</th>
                                         <th>Start / End</th>
                                         <th>Status</th>
+                                        <th>Exam Link</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -121,8 +122,14 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     <?= !empty($exam['end_time']) ? htmlspecialchars($exam['end_time']) : '-' ?>
                                                 </td>
                                                 <td><?= ($exam['start_time'] <= date('Y-m-d H:i:s') && $exam['end_time'] >= date('Y-m-d H:i:s')) ? 'Active' : 'Inactive' ?></td>
-                                                                                                <td>
-                                                   
+                                                <td>
+                                                    <?php if ($fullLink): ?>
+                                                        <a href="<?= htmlspecialchars($fullLink) ?>" target="_blank"><?= htmlspecialchars($fullLink) ?></a>
+                                                    <?php else: ?>
+                                                        -
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
                                                     <a class="btn btn-sm btn-warning me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?= $exam['exam_id'] ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
@@ -133,7 +140,9 @@ $offset      = ($currentPage - 1) * $perPage;
                                                             <i class="bi bi-trash"></i> Delete
                                                         </button>
                                                     </form>
-                                                  
+                                                    <a class="btn btn-sm btn-success mb-1" href="<?= BASE_URL ?>/admin.php?action=examLinks&id=<?= $exam['exam_id'] ?>">
+                                                        <i class="bi bi-link-45deg"></i> Links
+                                                    </a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
