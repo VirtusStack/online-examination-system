@@ -61,11 +61,17 @@ $results['students'] = $results['students'] ?? [];
                                 <input type="number" name="duration_minutes" class="form-control" min="1" value="<?= htmlspecialchars($results['duration_minutes'] ?? 30) ?>">
                             </div>
 
-                            <!-- Total Marks -->
-                            <div class="form-group mb-3">
-                                <label>Total Marks:</label>
-                                <input type="number" step="0.01" name="total_marks" class="form-control" value="<?= htmlspecialchars($results['total_marks'] ?? '') ?>">
-                            </div>
+                              <!-- Total Marks -->
+			   <div class="form-group mb-3">
+    				<label>Total Marks:</label>
+    				<input type="number" step="0.01" name="total_marks" class="form-control" value="<?= htmlspecialchars($results['total_marks'] ?? '') ?>">
+			   </div>
+
+			   <!-- Pass Marks  -->
+				<div class="form-group mb-3">
+    				<label>Pass Marks:</label>
+    				<input type="number" step="0.01" name="pass_marks" class="form-control"value="<?= htmlspecialchars($results['pass_marks'] ?? '') ?>">
+			   </div>
 
                             <!-- Start & End Date -->
                             <div class="form-group mb-3">
