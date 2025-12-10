@@ -10,14 +10,16 @@ class Exam {
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO exams 
-                (exam_title, exam_description, duration_minutes, total_questions, shuffle_questions, shuffle_options, negative_marking, start_time, end_time, assign_type, easy_percentage, medium_percentage, hard_percentage, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                (exam_title, exam_description, duration_minutes, total_questions, total_marks, pass_marks, shuffle_questions, shuffle_options, negative_marking, start_time, end_time, assign_type, easy_percentage, medium_percentage, hard_percentage, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $data['exam_title'] ?? '',
                 $data['exam_description'] ?? '',
                 $data['duration_minutes'] ?? 30,
                 $data['total_questions'] ?? 0,
+		$data['total_marks'] ?? 0,
+		$data['pass_marks'] ?? 0,
                 $data['shuffle_questions'] ?? 0,
                 $data['shuffle_options'] ?? 0,
                 $data['negative_marking'] ?? 0,
@@ -64,6 +66,8 @@ class Exam {
                     exam_description=?, 
                     duration_minutes=?, 
                     total_questions=?, 
+		    total_marks=?,
+		    pass_marks=?,
                     shuffle_questions=?, 
                     shuffle_options=?, 
                     negative_marking=?, 
@@ -80,6 +84,8 @@ class Exam {
                 $data['exam_description'] ?? '',
                 $data['duration_minutes'] ?? 30,
                 $data['total_questions'] ?? 0,
+		$data['total_marks'] ?? 0,
+		$data['pass_marks'] ?? 0,
                 $data['shuffle_questions'] ?? 0,
                 $data['shuffle_options'] ?? 0,
                 $data['negative_marking'] ?? 0,
@@ -173,12 +179,23 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Insert assigned students AND create exam links
+    // Fetch exam total_marks for results
+    $stmtExam = $pdo->prepare("SELECT total_marks, pass_marks FROM exams WHERE exam_id=? LIMIT 1");
+    $stmtExam->execute([$exam_id]);
+    $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
+    $total_marks = $exam['total_marks'] ?? 0;
+    $pass_marks  = $exam['pass_marks'] ?? 0;
+
+    // Insert assigned students AND create exam links & results
     if (!empty($students)) {
         $stmtInsert = $pdo->prepare("INSERT INTO exam_assigned_students (exam_id, student_id) VALUES (?, ?)");
         $stmtLink   = $pdo->prepare("
             INSERT INTO exam_links (exam_id, unique_link, student_email, student_name, created_at)
             VALUES (?, ?, ?, ?, NOW())
+        ");
+        $stmtResult = $pdo->prepare("
+            INSERT INTO exam_results (exam_id, link_id, student_name, student_email, total_marks, obtained_marks, started_at, submitted_at)
+            VALUES (?, ?, ?, ?, ?, 0.00, NULL, NULL)
         ");
 
         foreach ($students as $student) {
@@ -188,10 +205,20 @@ public static function assignStudents($pdo, $exam_id, $type, $data) {
             // Check if link already exists
             $stmtCheck = $pdo->prepare("SELECT link_id FROM exam_links WHERE exam_id=? AND student_email=?");
             $stmtCheck->execute([$exam_id, $student['email']]);
-            if (!$stmtCheck->fetch()) {
+            if (!$existingLink = $stmtCheck->fetch()) {
                 // Create unique link
                 $unique_link = uniqid('exam_', true);
                 $stmtLink->execute([$exam_id, $unique_link, $student['email'], $student['name']]);
+                $link_id = $pdo->lastInsertId();
+
+                // Create corresponding exam result
+                $stmtResult->execute([
+                    $exam_id,
+                    $link_id,
+                    $student['name'],
+                    $student['email'],
+                    $total_marks
+                ]);
             }
         }
     }
