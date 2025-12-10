@@ -122,6 +122,15 @@
         </div>
     </li>
 
+   <!-- Result Module -->
+   <li class="nav-item">
+      <a class="nav-link" href="<?= BASE_URL ?>/admin.php?action=manageResults">
+          <i class="fas fa-poll"></i>
+          <span>Manage Results</span>
+      </a>
+   </li>
+
+
     <hr class="sidebar-divider d-none d-md-block">
 
     <!-- Logout -->
