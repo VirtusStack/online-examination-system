@@ -15,6 +15,7 @@ require_once __DIR__ . "/classes/Exam.php";
 require_once __DIR__ . "/classes/Classroom.php";
 require_once __DIR__ . "/classes/Student.php";
 require_once __DIR__ . "/classes/QuestionBankSubject.php";
+require_once __DIR__ . "/classes/Result.php";
 
 //  AUTO-LOGIN USING REMEMBER ME COOKIE
 if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_admin'])) {
@@ -141,6 +142,15 @@ case 'manageQBS':
 case 'editQBS':
     editQBS();
     break;
+
+// Result
+case "manageResults":
+      manageResults();
+      break;
+
+case "viewResult":
+     viewResult();
+     break;
 
 }
 
@@ -570,6 +580,10 @@ function newExam() {
         $exam_description = trim($_POST['exam_description'] ?? '');
         $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
 
+        // NEW FIELDS
+        $total_marks = (float)($_POST['total_marks'] ?? 0);
+        $pass_marks  = (float)($_POST['pass_marks'] ?? 0);
+
         // Settings
         $shuffle_questions  = $_POST['shuffle_questions'] ?? 0;
         $shuffle_options    = $_POST['shuffle_options'] ?? 0;
@@ -612,6 +626,8 @@ function newExam() {
             $results['message'] = "Exam title is required!";
         } elseif ($total_questions <= 0) {
             $results['message'] = "You must select at least one question!";
+        } elseif ($pass_marks > $total_marks) {
+            $results['message'] = "Pass marks cannot be greater than total marks!";
         } else {
 
             // --------------------------
@@ -622,6 +638,11 @@ function newExam() {
                 'exam_description'  => $exam_description,
                 'duration_minutes'  => $duration_minutes,
                 'total_questions'   => $total_questions,
+
+                // NEW FIELDS ADDED HERE
+                'total_marks'       => $total_marks,
+                'pass_marks'        => $pass_marks,
+
                 'shuffle_questions' => $shuffle_questions,
                 'shuffle_options'   => $shuffle_options,
                 'negative_marking'  => $negative_marking,
@@ -681,12 +702,18 @@ function newExam() {
         $results['exam_title']        = $exam_title;
         $results['exam_description']  = $exam_description;
         $results['duration_minutes']  = $duration_minutes;
+
+        // NEW FIELDS PRESERVED
+        $results['total_marks']       = $total_marks;
+        $results['pass_marks']        = $pass_marks;
+
         $results['shuffle_questions'] = $shuffle_questions;
         $results['shuffle_options']   = $shuffle_options;
         $results['negative_marking']  = $negative_marking;
         $results['start_time']        = $start_time;
         $results['end_time']          = $end_time;
         $results['expires_at']        = $expires_at ?? '';
+
         $results['easy_percent']      = $easy_percent;
         $results['medium_percent']    = $medium_percent;
         $results['hard_percent']      = $hard_percent;
@@ -746,7 +773,6 @@ function manageExams() {
 }
 
 // Edit Exam Controller
-// Edit Exam Controller
 function editExam() {
     global $pdo;
     $exam_id = (int)($_GET['id'] ?? 0);
@@ -755,7 +781,7 @@ function editExam() {
     // --------------------------
     // Fetch exam info
     // --------------------------
-    $exam = Exam::getById($pdo, $exam_id); // make sure method exists in Exam class
+    $exam = Exam::getById($pdo, $exam_id); // make sure method exists
     if (!$exam) {
         $results['message'] = "Exam not found!";
         require(TEMPLATE_PATH . "/exams/edit_exam.php");
@@ -765,10 +791,10 @@ function editExam() {
     // --------------------------
     // Load dropdown data
     // --------------------------
-    $results['subjects'] = Exam::getAllSubjects($pdo);
+    $results['subjects']       = Exam::getAllSubjects($pdo);
     $results['question_banks'] = Exam::getAllQuestionBanks($pdo);
-    $results['classes'] = Exam::getAllClasses($pdo);
-    $results['students'] = Exam::getAllStudents($pdo);
+    $results['classes']        = Exam::getAllClasses($pdo);
+    $results['students']       = Exam::getAllStudents($pdo);
 
     // --------------------------
     // Load existing question sources
@@ -776,37 +802,34 @@ function editExam() {
     $sources = Exam::getQuestionSources($pdo, $exam_id);
     $exam_question_sources = [];
     $total_questions = 0;
+
     $easy_percent = 20;
     $medium_percent = 30;
     $hard_percent = 50;
 
     foreach ($sources as $src) {
-        $bank_id = $src['bank_id'];
+        $bank_id    = $src['bank_id'];
         $subject_id = $src['subject_id'];
-        $limit = (int)($src['question_limit'] ?? 0);
+        $limit      = (int)($src['question_limit'] ?? 0);
         $difficulty = $src['difficulty'] ?? 'Easy';
 
-        // Initialize array
         if (!isset($exam_question_sources[$bank_id][$subject_id])) {
             $exam_question_sources[$bank_id][$subject_id] = ['limit' => 0, 'difficulty' => 'Easy'];
         }
 
-        // Sum limits by difficulty
         $exam_question_sources[$bank_id][$subject_id]['limit'] += $limit;
         $exam_question_sources[$bank_id][$subject_id]['difficulty'] = $difficulty;
-        $total_questions += $limit;
 
-        // Optionally store difficulty percentages if you saved them per exam
-        if ($difficulty === 'Easy') $easy_percent += $limit;
-        elseif ($difficulty === 'Medium') $medium_percent += $limit;
-        elseif ($difficulty === 'Hard') $hard_percent += $limit;
+        $total_questions += $limit;
     }
 
     $results['exam_question_sources'] = $exam_question_sources;
     $results['total_questions'] = $total_questions;
-    $results['easy_percent'] = $exam['easy_percentage'] ?? $easy_percent;
+
+    // Difficulty %
+    $results['easy_percent']   = $exam['easy_percentage']   ?? $easy_percent;
     $results['medium_percent'] = $exam['medium_percentage'] ?? $medium_percent;
-    $results['hard_percent'] = $exam['hard_percentage'] ?? $hard_percent;
+    $results['hard_percent']   = $exam['hard_percentage']   ?? $hard_percent;
 
     // --------------------------
     // Load exam link info
@@ -816,9 +839,12 @@ function editExam() {
     $linkInfo = $stmtLink->fetch(PDO::FETCH_ASSOC);
 
     $baseUrl = rtrim(BASE_URL, '/') . '/';
-    $results['exam_link'] = !empty($linkInfo['unique_link']) ? $baseUrl . "student.php?action=startExam&link=" . $linkInfo['unique_link'] : '';
+    $results['exam_link'] = !empty($linkInfo['unique_link'])
+        ? $baseUrl . "student.php?action=startExam&link=" . $linkInfo['unique_link']
+        : '';
+
     $results['expires_at'] = $linkInfo['expires_at'] ?? '';
-    $results['exam_password'] = ''; // optional, leave blank for security
+    $results['exam_password'] = '';
 
     // --------------------------
     // Prefill exam details
@@ -833,24 +859,30 @@ function editExam() {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Collect fields
-        $exam_title       = trim($_POST['exam_title'] ?? '');
-        $exam_description = trim($_POST['exam_description'] ?? '');
-        $duration_minutes = (int)($_POST['duration_minutes'] ?? 30);
-        $total_marks      = (float)($_POST['total_marks'] ?? 0);
+        $exam_title        = trim($_POST['exam_title'] ?? '');
+        $exam_description  = trim($_POST['exam_description'] ?? '');
+        $duration_minutes  = (int)($_POST['duration_minutes'] ?? 30);
+        $total_marks       = (float)($_POST['total_marks'] ?? 0);
+        $pass_marks        = (float)($_POST['pass_marks'] ?? 0);   
+
         $shuffle_questions = $_POST['shuffle_questions'] ?? 0;
         $shuffle_options   = $_POST['shuffle_options'] ?? 0;
         $negative_marking  = (float)($_POST['negative_marking'] ?? 0);
-        $start_time       = $_POST['start_time'] ?? null;
-        $end_time         = $_POST['end_time'] ?? null;
-        $assign_type      = $_POST['assign_type'] ?? 'class';
-        $assign_data      = $_POST['assign_data'] ?? [];
+
+        $start_time = $_POST['start_time'] ?? null;
+        $end_time   = $_POST['end_time'] ?? null;
+
+        $assign_type = $_POST['assign_type'] ?? 'class';
+        $assign_data = $_POST['assign_data'] ?? [];
+
         $exam_question_sources = $_POST['exam_question_sources'] ?? [];
 
+        // Difficulty %
         $easy_percent   = (int)($_POST['easy_percent'] ?? 20);
         $medium_percent = (int)($_POST['medium_percent'] ?? 30);
         $hard_percent   = (int)($_POST['hard_percent'] ?? 50);
 
-        // Validate percentages
+        // Validate difficulty % totals
         if (($easy_percent + $medium_percent + $hard_percent) != 100) {
             $results['message'] = "Difficulty percentages must total 100%";
             require(TEMPLATE_PATH . "/exams/edit_exam.php");
@@ -872,29 +904,39 @@ function editExam() {
         } elseif ($total_questions <= 0) {
             $results['message'] = "You must select at least one question!";
         } else {
+
             // --------------------------
-            // Update Exam
+            // Update Exam (NOW WITH pass_marks)
             // --------------------------
             Exam::update($pdo, $exam_id, [
                 'exam_title'        => $exam_title,
                 'exam_description'  => $exam_description,
                 'duration_minutes'  => $duration_minutes,
                 'total_marks'       => $total_marks,
+                'pass_marks'        => $pass_marks,       // <--- ADDED
                 'total_questions'   => $total_questions,
+
                 'shuffle_questions' => $shuffle_questions,
                 'shuffle_options'   => $shuffle_options,
                 'negative_marking'  => $negative_marking,
+
                 'start_time'        => $start_time,
                 'end_time'          => $end_time,
+
                 'assign_type'       => $assign_type,
                 'assign_data'       => $assign_data,
+
                 'easy_percentage'   => $easy_percent,
                 'medium_percentage' => $medium_percent,
                 'hard_percentage'   => $hard_percent
             ]);
 
-            // Update question sources
-            $pdo->prepare("DELETE FROM exam_question_sources WHERE exam_id=?")->execute([$exam_id]);
+            // --------------------------
+            // Update Question Sources
+            // --------------------------
+            $pdo->prepare("DELETE FROM exam_question_sources WHERE exam_id=?")
+                ->execute([$exam_id]);
+
             $stmtSource = $pdo->prepare("
                 INSERT INTO exam_question_sources (exam_id, bank_id, subject_id, question_limit, difficulty)
                 VALUES (?, ?, ?, ?, ?)
@@ -915,9 +957,12 @@ function editExam() {
                 }
             }
 
+            // --------------------------
             // Update exam link password + expiry
+            // --------------------------
             $password   = $_POST['exam_password'] ?? '';
             $expires_at = $_POST['expires_at'] ?? null;
+
             if ($linkInfo) {
                 $stmt = $pdo->prepare("UPDATE exam_links SET password=?, expires_at=? WHERE exam_id=?");
                 $stmt->execute([
@@ -932,31 +977,42 @@ function editExam() {
             }
 
             $results['exam_link'] = $baseUrl . "student.php?action=startExam&link=" . $finalLinkCode;
-            $results['total_questions'] = $total_questions;
             $results['message'] = "Exam updated successfully!";
+            $results['total_questions'] = $total_questions;
         }
 
+        // --------------------------
         // Preserve form fields
+        // --------------------------
         $results['exam_title']        = $exam_title;
         $results['exam_description']  = $exam_description;
         $results['duration_minutes']  = $duration_minutes;
+
         $results['total_marks']       = $total_marks;
+        $results['pass_marks']        = $pass_marks;     // <--- ADDED
+
         $results['shuffle_questions'] = $shuffle_questions;
         $results['shuffle_options']   = $shuffle_options;
         $results['negative_marking']  = $negative_marking;
-        $results['start_time']        = $start_time;
-        $results['end_time']          = $end_time;
-        $results['assign_type']       = $assign_type;
-        $results['assign_data']       = $assign_data;
+
+        $results['start_time'] = $start_time;
+        $results['end_time']   = $end_time;
+
+        $results['assign_type']  = $assign_type;
+        $results['assign_data']  = $assign_data;
+
         $results['exam_question_sources'] = $exam_question_sources;
-        $results['expires_at']        = $expires_at;
-        $results['easy_percent']      = $easy_percent;
-        $results['medium_percent']    = $medium_percent;
-        $results['hard_percent']      = $hard_percent;
+
+        $results['expires_at'] = $expires_at;
+
+        $results['easy_percent']   = $easy_percent;
+        $results['medium_percent'] = $medium_percent;
+        $results['hard_percent']   = $hard_percent;
     }
 
     require(TEMPLATE_PATH . "/exams/edit_exam.php");
 }
+
 
 // -------------------------
 // CLASSROOM MANAGEMENT
@@ -1313,3 +1369,138 @@ function editQBS() {
 
     require(TEMPLATE_PATH . "/question_bank_subjects/edit_qbs.php");
 }
+
+// Result 
+function manageResults() {
+    global $pdo;
+
+    $results = [
+        'pageTitle' => 'Manage Results',
+        'resultsList' => [],
+        'message' => ''
+    ];
+
+    // Delete result
+    if (isset($_GET['delete'])) {
+        $id = (int)$_GET['delete'];
+        $stmt = $pdo->prepare("DELETE FROM exam_results WHERE result_id = ?");
+        if ($stmt->execute([$id])) {
+            $results['message'] = "Result deleted successfully!";
+        } else {
+            $results['message'] = "Error deleting result!";
+        }
+    }
+
+    // Pagination
+    $perPage = 25;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $offset = ($page - 1) * $perPage;
+
+    // Count
+    $total = $pdo->query("SELECT COUNT(*) FROM exam_results")->fetchColumn();
+    $totalPages = ceil($total / $perPage);
+
+    // Fetch results
+    $stmt = $pdo->prepare("
+        SELECT 
+            r.result_id,
+            r.exam_id,
+            r.student_name,
+            r.student_email,
+            r.total_marks,
+            r.obtained_marks,
+            r.started_at,
+            r.submitted_at,
+            e.exam_title
+        FROM exam_results r
+        LEFT JOIN exams e ON r.exam_id = e.exam_id
+        ORDER BY r.result_id DESC
+        LIMIT :limit OFFSET :offset
+    ");
+
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+    $results['resultsList'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $results['currentPage'] = $page;
+    $results['totalPages'] = $totalPages;
+
+    require TEMPLATE_PATH . "/results/manage_results.php";
+}
+
+function viewResult() {
+    global $pdo;
+
+    $results = [
+        'message' => '',
+        'pageTitle' => 'View Result',
+        'exam' => [],
+        'student' => [],
+        'questions' => [],
+        'total_marks' => 0,
+        'obtained' => 0
+    ];
+
+    if (!isset($_GET['id'])) {
+        $results['message'] = " Invalid result ID!";
+        require(TEMPLATE_PATH . "/results/view_result.php");
+        return;
+    }
+
+    $resultId = (int)$_GET['id'];
+
+    // Fetch main result row
+    $stmt = $pdo->prepare("
+        SELECT r.*, 
+               e.exam_title, e.total_marks AS exam_total, e.pass_marks, e.duration_minutes,
+               s.name AS student_name, s.email
+        FROM exam_results r
+        JOIN exams e ON r.exam_id = e.exam_id
+        JOIN students s ON r.student_id = s.student_id
+        WHERE r.result_id = ?
+    ");
+    $stmt->execute([$resultId]);
+    $main = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$main) {
+        $results['message'] = " Result not found!";
+        require(TEMPLATE_PATH . "/results/view_result.php");
+        return;
+    }
+
+    // Assign exam & student info
+    $results['exam'] = [
+        'exam_title'      => $main['exam_title'],
+        'total_marks'     => $main['exam_total'],
+        'pass_marks'      => $main['pass_marks'],
+        'duration_minutes'=> $main['duration_minutes']
+    ];
+
+    $results['student'] = [
+        'name'        => $main['student_name'],
+        'email'       => $main['email'],
+        'started_at'  => $main['started_at'],
+        'submitted_at'=> $main['submitted_at']
+    ];
+
+    $results['total_marks'] = $main['total_marks'];
+    $results['obtained']    = $main['obtained_marks'];
+
+    // Fetch all answered questions
+    $stmtQ = $pdo->prepare("
+        SELECT q.question_text, q.correct_answer,
+               a.student_answer, a.is_correct, a.marks_obtained
+        FROM exam_answers a
+        JOIN questions q ON a.question_id = q.question_id
+        WHERE a.result_id = ?
+        ORDER BY a.answer_id ASC
+    ");
+    $stmtQ->execute([$resultId]);
+    $results['questions'] = $stmtQ->fetchAll(PDO::FETCH_ASSOC);
+
+    // Load template
+    require(TEMPLATE_PATH . "/results/view_result.php");
+}
+
