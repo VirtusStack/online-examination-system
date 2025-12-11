@@ -105,11 +105,14 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     . " (E {$easy_pct}%, M {$medium_pct}%, H {$hard_pct}%)";
                                             }
 
-                                            // --- Fetch exam link (first student link for preview)
-                                            $stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
-                                            $stmtLink->execute([$exam['exam_id']]);
-                                            $linkCode = $stmtLink->fetchColumn();
-                                            $fullLink = $linkCode ? BASE_URL . "/student.php?action=startExam&link=" . $linkCode : '';
+                                            // Fetch first unique link for preview / email
+						$stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
+						$stmtLink->execute([$exam['exam_id']]);
+						$linkCode = $stmtLink->fetchColumn();
+
+					   // New email-ready link
+						$fullLink = $linkCode ? BASE_URL . "/student.php?action=examAccess&code=" . $linkCode : '';
+
                                             ?>
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
@@ -140,10 +143,7 @@ $offset      = ($currentPage - 1) * $perPage;
                                                             <i class="bi bi-trash"></i> Delete
                                                         </button>
                                                     </form>
-                                                    <a class="btn btn-sm btn-success mb-1" href="<?= BASE_URL ?>/admin.php?action=examLinks&id=<?= $exam['exam_id'] ?>">
-                                                        <i class="bi bi-link-45deg"></i> Links
-                                                    </a>
-                                                </td>
+                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
