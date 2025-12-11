@@ -75,7 +75,7 @@ $offset      = ($currentPage - 1) * $perPage;
                                         <th>Duration (min)</th>
                                         <th>Start / End</th>
                                         <th>Status</th>
-                                        <th>Exam Link</th>
+                                        <th>Student Link</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -105,14 +105,10 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     . " (E {$easy_pct}%, M {$medium_pct}%, H {$hard_pct}%)";
                                             }
 
-                                            // Fetch first unique link for preview / email
-						$stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
-						$stmtLink->execute([$exam['exam_id']]);
-						$linkCode = $stmtLink->fetchColumn();
-
-					   // New email-ready link
-						$fullLink = $linkCode ? BASE_URL . "/student.php?action=examAccess&code=" . $linkCode : '';
-
+                                            // --- Fetch first unique link for student
+                                            $stmtLink = $pdo->prepare("SELECT unique_link FROM exam_links WHERE exam_id=? LIMIT 1");
+                                            $stmtLink->execute([$exam['exam_id']]);
+                                            $linkCode = $stmtLink->fetchColumn();
                                             ?>
                                             <tr>
                                                 <td><?= $exam['exam_id'] ?></td>
@@ -125,13 +121,22 @@ $offset      = ($currentPage - 1) * $perPage;
                                                     <?= !empty($exam['end_time']) ? htmlspecialchars($exam['end_time']) : '-' ?>
                                                 </td>
                                                 <td><?= ($exam['start_time'] <= date('Y-m-d H:i:s') && $exam['end_time'] >= date('Y-m-d H:i:s')) ? 'Active' : 'Inactive' ?></td>
+
+                                                <!-- STUDENT LINK COLUMN -->
                                                 <td>
-                                                    <?php if ($fullLink): ?>
-                                                        <a href="<?= htmlspecialchars($fullLink) ?>" target="_blank"><?= htmlspecialchars($fullLink) ?></a>
+                                                    <?php if ($linkCode): ?>
+                                                        <div class="d-flex align-items-center">
+                                                            <a href="javascript:void(0);" onclick="copyLink('link-<?= $exam['exam_id'] ?>')" class="me-2">
+                                                                Student Link
+                                                            </a>
+                                                            <input type="text" id="link-<?= $exam['exam_id'] ?>" value="<?= htmlspecialchars(BASE_URL . '/student.php?action=examAccess&code=' . $linkCode) ?>" class="form-control form-control-sm" readonly style="width:250px">
+                                                        </div>
                                                     <?php else: ?>
                                                         -
                                                     <?php endif; ?>
                                                 </td>
+
+                                                <!-- ACTIONS -->
                                                 <td>
                                                     <a class="btn btn-sm btn-warning me-1 mb-1" href="<?= BASE_URL ?>/admin.php?action=editExam&id=<?= $exam['exam_id'] ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
@@ -143,7 +148,7 @@ $offset      = ($currentPage - 1) * $perPage;
                                                             <i class="bi bi-trash"></i> Delete
                                                         </button>
                                                     </form>
-                                                 </td>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -195,3 +200,14 @@ $offset      = ($currentPage - 1) * $perPage;
         <?php include __DIR__ . "/../include/footer.php"; ?>
     </div>
 </div>
+
+<!-- COPY LINK SCRIPT -->
+<script>
+function copyLink(id) {
+    var copyText = document.getElementById(id);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("Copied to clipboard: " + copyText.value);
+}
+</script>
