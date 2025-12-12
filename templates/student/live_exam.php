@@ -95,6 +95,7 @@ include __DIR__ . "/header.php";
 <!-- End of Content Wrapper -->
 
 <script>
+
 // Prevent multiple tabs
 if (sessionStorage.getItem('exam_live_lock')) {
     alert("⚠ Exam already running in another tab. This tab will be blocked.");
@@ -106,14 +107,16 @@ window.addEventListener('beforeunload', function() {
     sessionStorage.removeItem('exam_live_lock');
 });
 
+
 // Disable right-click & copy/paste/print
 document.addEventListener('contextmenu', e => e.preventDefault());
 ['copy','paste','cut','beforeprint','print'].forEach(evt => {
     window.addEventListener(evt, e => e.preventDefault());
 });
 
-
+// ------------------------------
 // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, F5, Ctrl+R
+// ------------------------------
 document.onkeydown = function(e) {
     if (
         e.keyCode === 123 ||                        
@@ -125,6 +128,7 @@ document.onkeydown = function(e) {
     ) { e.preventDefault(); return false; }
 };
 
+
 // Prevent back button
 history.pushState(null, null, location.href);
 window.onpopstate = function() { history.go(1); };
@@ -133,7 +137,7 @@ window.onpopstate = function() { history.go(1); };
 let switchCount = 0;
 document.addEventListener("visibilitychange", function() {
 
-    // 🔧 FIX: Do NOT show tab-switch alerts during submit
+    //  FIX: Do NOT show tab-switch alerts during submit
     if (examSubmitted) return;
 
     if (document.hidden) {
@@ -146,9 +150,10 @@ document.addEventListener("visibilitychange", function() {
     }
 });
 
+
 // Detect DevTools
 setInterval(function() {
-    if (examSubmitted) return; 
+    if (examSubmitted) return; // FIX
 
     const before = new Date().getTime();
     debugger;
@@ -167,9 +172,12 @@ document.addEventListener("keyup", (e) => {
     if (e.key === "PrintScreen") alert("Screenshots are not allowed!");
 });
 
-
+// ------------------------------
 // Disable refresh/reload (MAIN CAUSE OF POPUP)
+// ------------------------------
 
+
+// THAT BLOCKS ONLY WHEN NOT SUBMITTING
 window.onbeforeunload = function (e) {
     if (!examSubmitted) {
         e.preventDefault();
@@ -177,9 +185,9 @@ window.onbeforeunload = function (e) {
     }
 };
 
-
+// ------------------------------
 // Question Navigation
-
+// ------------------------------
 let currentIndex = 0;
 const totalQuestions = <?= count($questions); ?>;
 const questionBlocks = document.querySelectorAll('.question-block');
@@ -203,9 +211,9 @@ document.getElementById('nextBtn').addEventListener('click', () => {
 
 showQuestions(currentIndex);
 
-// UPDATED TIMER LOGIC
 
-let examSubmitted = false;  // <--- Needed
+// UPDATED TIMER LOGIC
+let examSubmitted = false;  
 
 let duration = <?= intval($exam['duration_minutes'] ?? 30); ?> * 60;
 const timerEl = document.getElementById('timer');
@@ -228,8 +236,9 @@ const countdown = setInterval(() => {
     }
 }, 1000);
 
+// ------------------------------
 //  MAIN FIX: Disable warnings during submit
-
+// ------------------------------
 document.getElementById("examForm").addEventListener("submit", function () {
     examSubmitted = true;
 
