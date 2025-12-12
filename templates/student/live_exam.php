@@ -49,8 +49,7 @@ include __DIR__ . "/header.php";
                             <!-- Exam Form -->
                             <form id="examForm" method="post" action="student.php?action=submitExam&exam_id=<?= intval($exam['exam_id'] ?? 0); ?>">
                                 <!-- Pass link_id to controller for saving results -->
-                                <input type="hidden" name="link_id" value="<?= intval($link['link_id'] ?? 0); ?>">
-<input type="hidden" name="link_id" value="<?= intval($link['link_id']); ?>">
+				<input type="hidden" name="link_id" value="<?= intval($link['link_id']); ?>">
 
                                 <?php foreach ($questions as $index => $q): ?>
                                     <div class="question-block mb-4 <?= $index < 5 ? '' : 'd-none'; ?>" data-index="<?= $index; ?>">
@@ -194,7 +193,10 @@ const questionBlocks = document.querySelectorAll('.question-block');
 const pageSize = 5;
 
 function showQuestions(start) {
-    questionBlocks.forEach((block, i) => block.classList.toggle('d-none', i < start || i >= start + pageSize));
+    questionBlocks.forEach((block, i) => {
+        block.classList.toggle('d-none', !(i >= start && i < start + pageSize));
+    });
+
     document.getElementById('currentQuestion').textContent = start + 1;
     document.getElementById('currentQuestionEnd').textContent = Math.min(start + pageSize, totalQuestions);
     document.getElementById('prevBtn').style.display = start === 0 ? 'none' : 'inline-block';
