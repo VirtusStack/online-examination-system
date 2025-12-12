@@ -60,7 +60,6 @@ $perPage     = 25;
                                         <th>Total Marks</th>
                                         <th>Obtained</th>
                                         <th>Started At</th>
-                                        <th>Submitted At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -75,7 +74,6 @@ $perPage     = 25;
                                                 <td><?= $res['total_marks'] ?></td>
                                                 <td><?= $res['obtained_marks'] ?></td>
                                                 <td><?= htmlspecialchars($res['started_at'] ?? '-') ?></td>
-                                                <td><?= htmlspecialchars($res['submitted_at'] ?? '-') ?></td>
                                                 <td>
                                                     <!-- View -->
                                                     <a class="btn btn-sm btn-info" 
