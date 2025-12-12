@@ -333,10 +333,11 @@ function liveExam() {
             'D' => $q['option_d']
         ];
     }
-
+      shuffle($questions);
     require(__DIR__ . "/templates/student/live_exam.php");
 }
 
+// submit exam
 function submitExam() {
     global $pdo;
 
@@ -438,6 +439,7 @@ function submitExam() {
     exit;
 }
 
+// Exam submitted page
 function examSubmittedPage() {
     global $pdo;
 
