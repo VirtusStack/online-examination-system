@@ -989,7 +989,7 @@ function editExam() {
         $results['duration_minutes']  = $duration_minutes;
 
         $results['total_marks']       = $total_marks;
-        $results['pass_marks']        = $pass_marks;     // <--- ADDED
+        $results['pass_marks']        = $pass_marks;     
 
         $results['shuffle_questions'] = $shuffle_questions;
         $results['shuffle_options']   = $shuffle_options;
