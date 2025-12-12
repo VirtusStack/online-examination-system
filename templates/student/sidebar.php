@@ -11,20 +11,7 @@
         </a>
     </li>
 
-    <li class="nav-item">
-        <a class="nav-link" href="student.php?action=exams">
-            <i class="fas fa-fw fa-book"></i>
-            <span>My Exams</span>
-        </a>
-    </li>
-
-    <li class="nav-item">
-        <a class="nav-link" href="student.php?action=results">
-            <i class="fas fa-fw fa-chart-bar"></i>
-            <span>Results</span>
-        </a>
-    </li>
-
+   
     <li class="nav-item">
         <a class="nav-link" href="student.php?action=logout">
             <i class="fas fa-fw fa-sign-out-alt"></i>
