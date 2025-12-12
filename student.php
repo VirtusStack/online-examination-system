@@ -1,6 +1,5 @@
 <?php
 // student.php
-// ---------------------------------------------------------------------
 // Student Controller - Online Examination System
 // Handles: Login, Logout, Dashboard, Start Exam, Live Exam, Submit Exam
 // Structure + Comments follow same format as admin.php
@@ -18,15 +17,14 @@ if (!isset($_SESSION['student_id']) && isset($_COOKIE['remember_student'])) {
     $student = Student::getById($pdo, $studentId);
 
     if ($student) {
-        $_SESSION['student_id']   = $student['student_id'];
-        $_SESSION['student_name'] = $student['name'];
+        $_SESSION['student_id']    = $student['student_id'];
+        $_SESSION['student_name']  = $student['name'];
         $_SESSION['student_email'] = $student['email'];
-        $_SESSION['login_time']   = time();
+        $_SESSION['login_time']    = time();
     } else {
         setcookie("remember_student", "", time() - 3600, "/");
     }
 }
-
 
 // ROUTING
 $action = $_GET['action'] ?? 'login';
@@ -51,6 +49,12 @@ switch ($action) {
         studentDashboard();
         break;
 
+    // NEW: Access exam via unique email link
+    case 'examAccess':
+        examAccess();
+        break;
+
+    // Existing startExam
     case 'startExam':
         startExam();
         break;
@@ -63,7 +67,6 @@ switch ($action) {
         submitExam();
         break;
 }
-
 
 // FUNCTION DEFINITIONS
 
@@ -105,6 +108,16 @@ function studentLogin() {
                     );
                 }
 
+                // Redirect if pending exam after clicking email link
+                if (!empty($_SESSION['pending_exam_id']) && !empty($_SESSION['pending_link_id'])) {
+                    $exam_id = $_SESSION['pending_exam_id'];
+                    $link_id = $_SESSION['pending_link_id'];
+
+                    unset($_SESSION['pending_exam_id'], $_SESSION['pending_link_id']);
+                    header("Location: student.php?action=startExam&exam_id={$exam_id}&link_id={$link_id}");
+                    exit;
+                }
+
                 header("Location: student.php?action=dashboard");
                 exit;
             } else {
@@ -119,7 +132,6 @@ function studentLogin() {
 }
 
 // STUDENT LOGOUT
-
 function studentLogout() {
     if (isset($_COOKIE['remember_student'])) {
         setcookie("remember_student", "", time() - 3600, "/");
@@ -131,7 +143,6 @@ function studentLogout() {
 }
 
 // STUDENT DASHBOARD
-
 function studentDashboard() {
     global $pdo;
 
@@ -146,7 +157,58 @@ function studentDashboard() {
     require(__DIR__ . "/templates/student/dashboard.php");
 }
 
-// Start Exam
+// NEW: Access Exam via unique email link
+// Access Exam via unique email link
+function examAccess() {
+    global $pdo;
+
+    $code = $_GET['code'] ?? '';
+
+    if (!$code) {
+        echo "<h3 style='color:red;text-align:center;margin-top:30px;'>Invalid Exam Link!</h3>";
+        exit;
+    }
+
+    // Fetch exam link info
+    $stmt = $pdo->prepare("SELECT * FROM exam_links WHERE unique_link = ?");
+    $stmt->execute([$code]);
+    $link = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$link) {
+        echo "<h3 style='color:red;text-align:center;margin-top:30px;'>Invalid or expired exam link!</h3>";
+        exit;
+    }
+
+    $exam_id = $link['exam_id'];
+    $link_id = $link['link_id']; // assuming your table has link_id primary
+
+    // BLOCK ADMIN ACCESS
+    if (!empty($_SESSION['admin_id'])) {
+        echo "<h3 style='color:red;text-align:center;margin-top:30px;'>
+            This exam link is only for students. Please logout from admin panel before using this link.
+        </h3>";
+        exit;
+    }
+
+    // STUDENT NOT LOGGED IN
+    if (empty($_SESSION['student_id'])) {
+        // Store exam info in session to redirect after login
+        $_SESSION['pending_exam_id'] = $exam_id;
+        $_SESSION['pending_link_id'] = $link_id;
+
+        // Redirect to login page
+        header("Location: student.php?action=login&redirect=startExam");
+        exit;
+    }
+
+    // -------------------------------
+    // STUDENT LOGGED IN
+    // -------------------------------
+    header("Location: student.php?action=startExam&exam_id={$exam_id}&link_id={$link_id}");
+    exit;
+}
+
+// START EXAM 
 function startExam() {
     global $pdo;
 
@@ -158,7 +220,7 @@ function startExam() {
         exit;
     }
 
-    // FETCH EXAM
+    // 1) FETCH EXAM DETAILS
     $stmt = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ?");
     $stmt->execute([$exam_id]);
     $exam = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -168,19 +230,16 @@ function startExam() {
         exit;
     }
 
-    // BLOCK IF STUDENT ALREADY SUBMITTED EXAM
-    $check = $pdo->prepare("
-        SELECT 1 FROM exam_results 
-        WHERE exam_id = ? AND link_id = ?
+    // UPDATE started_at
+    // This ensures started_at becomes actual time when the student begins exam
+    $stmtStart = $pdo->prepare("
+        UPDATE exam_results
+        SET started_at = NOW()
+        WHERE exam_id = ? AND link_id = ? AND started_at IS NULL
     ");
-    $check->execute([$exam_id, $link_id]);
-
-    if ($check->fetchColumn()) {
-        header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
-        exit;
-    }
-
-    // FETCH SUBJECTS FROM exam_question_sources
+    $stmtStart->execute([$exam_id, $link_id]);
+  
+    //  FETCH SUBJECTS FROM exam_question_sources
     $stmtSub = $pdo->prepare("
         SELECT DISTINCT s.subject_name
         FROM exam_question_sources eqs
@@ -188,13 +247,11 @@ function startExam() {
         WHERE eqs.exam_id = ?
     ");
     $stmtSub->execute([$exam_id]);
-
     $subjects = $stmtSub->fetchAll(PDO::FETCH_COLUMN);
 
-    // Add subjects to exam array
     $exam['subject_name'] = !empty($subjects) ? implode(', ', $subjects) : 'N/A';
 
-    // STORE SESSION   
+    // STORE SESSION (required for answering and submitting)
     $_SESSION['exam_id'] = $exam_id;
     $_SESSION['link_id'] = $link_id;
 
@@ -203,7 +260,6 @@ function startExam() {
 }
 
 // LIVE EXAM
-
 function liveExam() {
     global $pdo;
 
@@ -227,9 +283,7 @@ function liveExam() {
         exit;
     }
 
-    // -------------------------------------------------------------------
-    // FETCH QUESTION SOURCES (These define which questions to pull)
-    // -------------------------------------------------------------------
+    // FETCH QUESTIONS
     $stmt = $pdo->prepare("
         SELECT bank_id, subject_id, difficulty, question_limit
         FROM exam_question_sources
@@ -240,11 +294,7 @@ function liveExam() {
 
     $questions = [];
 
-    // -------------------------------------------------------------------
-    // FOR EACH SOURCE → PICK RANDOM QUESTIONS
-    // -------------------------------------------------------------------
     foreach ($sources as $src) {
-
         $sql = "
             SELECT q.*
             FROM questions q
@@ -268,9 +318,6 @@ function liveExam() {
         }
     }
 
-    // -------------------------------------------------------------------
-    // BUILD OPTIONS
-    // -------------------------------------------------------------------
     foreach ($questions as &$q) {
         $q['options'] = [
             'A' => $q['option_a'],
@@ -285,7 +332,7 @@ function liveExam() {
 
 function submitExam() {
     global $pdo;
-
+    // SESSION VALUES
     $exam_id = $_SESSION['exam_id'] ?? 0;
     $link_id = $_SESSION['link_id'] ?? 0;
 
@@ -294,12 +341,16 @@ function submitExam() {
         exit;
     }
 
-    // CHECK IF EXAM ALREADY SUBMITTED
-    $stmtCheck = $pdo->prepare("SELECT result_id FROM exam_results WHERE exam_id = ? AND link_id = ?");
+    $stmtCheck = $pdo->prepare("
+        SELECT result_id 
+        FROM exam_results 
+        WHERE exam_id = ? 
+          AND link_id = ?
+          AND submitted_at IS NOT NULL
+    ");
     $stmtCheck->execute([$exam_id, $link_id]);
-    $existingResult = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-    if ($existingResult) {
+    if ($stmtCheck->fetch()) {
         // Already submitted
         unset($_SESSION['exam_id'], $_SESSION['link_id']);
         header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
@@ -308,11 +359,15 @@ function submitExam() {
 
     $answers = $_POST['answers'] ?? [];
 
-    // Insert result row
+    // GET NEGATIVE MARKING
+    $stmtNeg = $pdo->prepare("SELECT negative_marking FROM exams WHERE exam_id = ?");
+    $stmtNeg->execute([$exam_id]);
+    $negative_mark = floatval($stmtNeg->fetchColumn());
+
     $stmt = $pdo->prepare("
         INSERT INTO exam_results
-            (link_id, exam_id, student_name, student_email, started_at, submitted_at)
-        VALUES (?, ?, ?, ?, NOW(), NOW())
+            (link_id, exam_id, student_name, student_email, total_marks, obtained_marks, started_at)
+        VALUES (?, ?, ?, ?, 0, 0, NOW())
     ");
     $stmt->execute([
         $link_id,
@@ -321,29 +376,65 @@ function submitExam() {
         $_SESSION['student_email']
     ]);
 
+    // GET RESULT ID
     $result_id = $pdo->lastInsertId();
 
-    // Insert answers
+    // CHECK IF INSERT FAILED
+    if (!$result_id) {
+        echo "Result entry missing!";
+        exit;
+    }
+
+    $obtained = 0;
+    $total = 0;
+
     foreach ($answers as $question_id => $selected) {
 
-        $stmtQ = $pdo->prepare("SELECT correct_option FROM questions WHERE question_id = ?");
+        // FETCH QUESTION DATA
+        $stmtQ = $pdo->prepare("SELECT correct_option, marks_per_question FROM questions WHERE question_id = ?");
         $stmtQ->execute([$question_id]);
-        $correct_option = $stmtQ->fetchColumn();
+        $qData = $stmtQ->fetch(PDO::FETCH_ASSOC);
 
-        $is_correct = ($selected === $correct_option) ? 1 : 0;
+        if (!$qData) continue;
 
+        $correct_option = $qData['correct_option'];
+        $marks = floatval($qData['marks_per_question']);
+
+        $total += $marks;
+
+        // RIGHT OR WRONG?
+        if ($selected == $correct_option) {
+            $score = $marks;
+            $is_correct = 1;
+        } else {
+            $score = ($negative_mark > 0) ? -$negative_mark : 0;
+            $is_correct = 0;
+        }
+
+        $obtained += $score;
+
+        // INSERT ANSWERS
         $stmtA = $pdo->prepare("
-            INSERT INTO exam_answers (result_id, question_id, selected_option, is_correct)
+            INSERT INTO exam_answers 
+                (result_id, question_id, selected_option, is_correct)
             VALUES (?, ?, ?, ?)
         ");
         $stmtA->execute([$result_id, $question_id, $selected, $is_correct]);
     }
 
-    // Clear exam session
+    // UPDATE RESULT MARKS + SUBMIT TIME
+    $stmtUpdate = $pdo->prepare("
+        UPDATE exam_results
+        SET total_marks = ?, obtained_marks = ?, submitted_at = NOW()
+        WHERE result_id = ?
+    ");
+    $stmtUpdate->execute([$total, $obtained, $result_id]);
+
+    // CLEAR SESSION
     unset($_SESSION['exam_id'], $_SESSION['link_id']);
 
-    // Redirect
     header("Location: student.php?action=dashboard&msg=Exam+Submitted+Successfully");
     exit;
 }
+
 ?>
