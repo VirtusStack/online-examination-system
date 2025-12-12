@@ -1375,12 +1375,14 @@ function manageResults() {
     global $pdo;
 
     $results = [
-        'pageTitle' => 'Manage Results',
+        'pageTitle'   => 'Manage Results',
         'resultsList' => [],
-        'message' => ''
+        'message'     => '',
+        'currentPage' => 1,
+        'totalPages'  => 1
     ];
 
-    // Delete result
+    // Handle delete request
     if (isset($_GET['delete'])) {
         $id = (int)$_GET['delete'];
         $stmt = $pdo->prepare("DELETE FROM exam_results WHERE result_id = ?");
@@ -1393,14 +1395,15 @@ function manageResults() {
 
     // Pagination
     $perPage = 25;
-    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-    $offset = ($page - 1) * $perPage;
+    $page    = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $offset  = ($page - 1) * $perPage;
 
-    // Count
-    $total = $pdo->query("SELECT COUNT(*) FROM exam_results")->fetchColumn();
+    // Total submitted results
+    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM exam_results WHERE submitted_at IS NOT NULL");
+    $total = (int)$stmtTotal->fetchColumn();
     $totalPages = ceil($total / $perPage);
 
-    // Fetch results
+    // Fetch submitted results for current page
     $stmt = $pdo->prepare("
         SELECT 
             r.result_id,
@@ -1414,18 +1417,18 @@ function manageResults() {
             e.exam_title
         FROM exam_results r
         LEFT JOIN exams e ON r.exam_id = e.exam_id
+        WHERE r.submitted_at IS NOT NULL
         ORDER BY r.result_id DESC
         LIMIT :limit OFFSET :offset
     ");
 
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
     $stmt->execute();
     $results['resultsList'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $results['currentPage'] = $page;
-    $results['totalPages'] = $totalPages;
+    $results['totalPages']  = $totalPages;
 
     require TEMPLATE_PATH . "/results/manage_results.php";
 }
