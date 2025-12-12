@@ -1433,69 +1433,84 @@ function manageResults() {
 function viewResult() {
     global $pdo;
 
+    // Default structure for template
     $results = [
-        'message' => '',
-        'pageTitle' => 'View Result',
-        'exam' => [],
-        'student' => [],
-        'questions' => [],
+        'message'     => '',
+        'pageTitle'   => 'View Result',
+        'exam'        => [],
+        'student'     => [],
+        'questions'   => [],
         'total_marks' => 0,
-        'obtained' => 0
+        'obtained'    => 0
     ];
 
+    // Check if result ID is provided
     if (!isset($_GET['id'])) {
-        $results['message'] = " Invalid result ID!";
+        $results['message'] = "Invalid result ID!";
         require(TEMPLATE_PATH . "/results/view_result.php");
         return;
     }
 
-    $resultId = (int)$_GET['id'];
+    $resultId = (int) $_GET['id'];
 
-    // Fetch main result row
+    // Fetch main result with exam info
     $stmt = $pdo->prepare("
         SELECT r.*, 
-               e.exam_title, e.total_marks AS exam_total, e.pass_marks, e.duration_minutes,
-               s.name AS student_name, s.email
+               e.exam_title, 
+               e.total_marks AS exam_total, 
+               e.pass_marks, 
+               e.duration_minutes
         FROM exam_results r
-        JOIN exams e ON r.exam_id = e.exam_id
-        JOIN students s ON r.student_id = s.student_id
+        INNER JOIN exams e ON r.exam_id = e.exam_id
         WHERE r.result_id = ?
+        LIMIT 1
     ");
     $stmt->execute([$resultId]);
     $main = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // If no result found
     if (!$main) {
-        $results['message'] = " Result not found!";
+        $results['message'] = "Result not found!";
         require(TEMPLATE_PATH . "/results/view_result.php");
         return;
     }
 
-    // Assign exam & student info
+    // Assign Exam Info
     $results['exam'] = [
-        'exam_title'      => $main['exam_title'],
-        'total_marks'     => $main['exam_total'],
-        'pass_marks'      => $main['pass_marks'],
-        'duration_minutes'=> $main['duration_minutes']
+        'exam_title'       => $main['exam_title'] ?? '-',
+        'total_marks'      => $main['exam_total'] ?? 0,
+        'pass_marks'       => $main['pass_marks'] ?? 0,
+        'duration_minutes' => $main['duration_minutes'] ?? 0
     ];
 
+    // Assign Student Info
     $results['student'] = [
-        'name'        => $main['student_name'],
-        'email'       => $main['email'],
-        'started_at'  => $main['started_at'],
-        'submitted_at'=> $main['submitted_at']
+        'name'         => $main['student_name'] ?? '-',
+        'email'        => $main['student_email'] ?? '-',
+        'started_at'   => $main['started_at'] ?? '-',
+        'submitted_at' => $main['submitted_at'] ?? '-'
     ];
 
-    $results['total_marks'] = $main['total_marks'];
-    $results['obtained']    = $main['obtained_marks'];
+    // Assign total and obtained marks
+    $results['total_marks'] = $main['total_marks'] ?? 0;
+    $results['obtained']    = $main['obtained_marks'] ?? 0;
 
-    // Fetch all answered questions
+    // Fetch all answered questions for this result
+    // Joining with questions table
     $stmtQ = $pdo->prepare("
-        SELECT q.question_text, q.correct_answer,
-               a.student_answer, a.is_correct, a.marks_obtained
+        SELECT 
+            q.question_text,
+            q.option_a,
+            q.option_b,
+            q.option_c,
+            q.option_d,
+            q.correct_option,
+            a.selected_option,
+            a.is_correct
         FROM exam_answers a
-        JOIN questions q ON a.question_id = q.question_id
+        INNER JOIN questions q ON a.question_id = q.question_id
         WHERE a.result_id = ?
-        ORDER BY a.answer_id ASC
+        ORDER BY a.id ASC
     ");
     $stmtQ->execute([$resultId]);
     $results['questions'] = $stmtQ->fetchAll(PDO::FETCH_ASSOC);
