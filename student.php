@@ -272,9 +272,11 @@ function liveExam() {
     }
 
     // BLOCK IF ALREADY SUBMITTED
+    // ---------------------------------------------------
+    // Only block if the exam_results row has submitted_at filled
     $check = $pdo->prepare("
         SELECT 1 FROM exam_results 
-        WHERE exam_id = ? AND link_id = ?
+        WHERE exam_id = ? AND link_id = ? AND submitted_at IS NOT NULL
     ");
     $check->execute([$exam_id, $link_id]);
 
@@ -282,6 +284,7 @@ function liveExam() {
         header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
         exit;
     }
+    // ---------------------------------------------------
 
     // FETCH QUESTIONS
     $stmt = $pdo->prepare("
@@ -436,5 +439,4 @@ function submitExam() {
     header("Location: student.php?action=dashboard&msg=Exam+Submitted+Successfully");
     exit;
 }
-
 ?>
