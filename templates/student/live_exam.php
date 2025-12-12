@@ -95,9 +95,7 @@ include __DIR__ . "/header.php";
 <!-- End of Content Wrapper -->
 
 <script>
-// ------------------------------
 // Prevent multiple tabs
-// ------------------------------
 if (sessionStorage.getItem('exam_live_lock')) {
     alert("⚠ Exam already running in another tab. This tab will be blocked.");
     window.location.href = 'student.php';
@@ -108,17 +106,14 @@ window.addEventListener('beforeunload', function() {
     sessionStorage.removeItem('exam_live_lock');
 });
 
-// ------------------------------
 // Disable right-click & copy/paste/print
-// ------------------------------
 document.addEventListener('contextmenu', e => e.preventDefault());
 ['copy','paste','cut','beforeprint','print'].forEach(evt => {
     window.addEventListener(evt, e => e.preventDefault());
 });
 
-// ------------------------------
+
 // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, F5, Ctrl+R
-// ------------------------------
 document.onkeydown = function(e) {
     if (
         e.keyCode === 123 ||                        
@@ -130,17 +125,17 @@ document.onkeydown = function(e) {
     ) { e.preventDefault(); return false; }
 };
 
-// ------------------------------
 // Prevent back button
-// ------------------------------
 history.pushState(null, null, location.href);
 window.onpopstate = function() { history.go(1); };
 
-// ------------------------------
 // Detect tab switching
-// ------------------------------
 let switchCount = 0;
 document.addEventListener("visibilitychange", function() {
+
+    // 🔧 FIX: Do NOT show tab-switch alerts during submit
+    if (examSubmitted) return;
+
     if (document.hidden) {
         switchCount++;
         alert("⚠ Please do not switch tabs during the exam!");
@@ -151,10 +146,10 @@ document.addEventListener("visibilitychange", function() {
     }
 });
 
-// ------------------------------
 // Detect DevTools
-// ------------------------------
 setInterval(function() {
+    if (examSubmitted) return; 
+
     const before = new Date().getTime();
     debugger;
     const after = new Date().getTime();
@@ -164,23 +159,27 @@ setInterval(function() {
     }
 }, 1000);
 
-// ------------------------------
+
 // Detect PrintScreen
-// ------------------------------
+
 document.addEventListener("keyup", (e) => {
+    if (examSubmitted) return; // FIX
     if (e.key === "PrintScreen") alert("Screenshots are not allowed!");
 });
 
-// ------------------------------
-// Disable refresh/reload
-// ------------------------------
-window.onbeforeunload = function() {
-    return "Exam in progress. Reloading will submit your exam.";
+
+// Disable refresh/reload (MAIN CAUSE OF POPUP)
+
+window.onbeforeunload = function (e) {
+    if (!examSubmitted) {
+        e.preventDefault();
+        return "Exam in progress.";
+    }
 };
 
-// ------------------------------
+
 // Question Navigation
-// ------------------------------
+
 let currentIndex = 0;
 const totalQuestions = <?= count($questions); ?>;
 const questionBlocks = document.querySelectorAll('.question-block');
@@ -204,13 +203,9 @@ document.getElementById('nextBtn').addEventListener('click', () => {
 
 showQuestions(currentIndex);
 
-// ------------------------------
 // UPDATED TIMER LOGIC
-// ------------------------------
-let examSubmitted = false;  // <--- ADDED
 
-// Add this in your submit button:
-// onclick="examSubmitted = true;"
+let examSubmitted = false;  // <--- Needed
 
 let duration = <?= intval($exam['duration_minutes'] ?? 30); ?> * 60;
 const timerEl = document.getElementById('timer');
@@ -228,8 +223,21 @@ const countdown = setInterval(() => {
     if (--duration < 0) {
         clearInterval(countdown);
         if (!examSubmitted) {
-            document.getElementById('examForm').submit(); // <--- No alert, only auto-submit
+            document.getElementById("examForm").submit();
         }
     }
 }, 1000);
+
+//  MAIN FIX: Disable warnings during submit
+
+document.getElementById("examForm").addEventListener("submit", function () {
+    examSubmitted = true;
+
+    // Disable all warnings
+    window.onbeforeunload = null;
+
+    // Prevent session lock from making popup
+    sessionStorage.removeItem('exam_live_lock');
+});
+
 </script>
