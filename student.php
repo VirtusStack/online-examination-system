@@ -49,12 +49,11 @@ switch ($action) {
         studentDashboard();
         break;
 
-    // NEW: Access exam via unique email link
+    // Access exam via unique email link
     case 'examAccess':
         examAccess();
         break;
 
-    // Existing startExam
     case 'startExam':
         startExam();
         break;
@@ -65,6 +64,11 @@ switch ($action) {
 
     case 'submitExam':
         submitExam();
+        break;
+
+    // Exam submitted page
+    case 'examSubmitted':
+        include __DIR__ . '/templates/student/exam_submitted.php';
         break;
 }
 
@@ -335,6 +339,7 @@ function liveExam() {
 
 function submitExam() {
     global $pdo;
+
     // SESSION VALUES
     $exam_id = $_SESSION['exam_id'] ?? 0;
     $link_id = $_SESSION['link_id'] ?? 0;
@@ -344,19 +349,20 @@ function submitExam() {
         exit;
     }
 
+    // CHECK IF ALREADY SUBMITTED
     $stmtCheck = $pdo->prepare("
         SELECT result_id 
         FROM exam_results 
         WHERE exam_id = ? 
-          AND link_id = ?
+          AND link_id = ? 
           AND submitted_at IS NOT NULL
     ");
     $stmtCheck->execute([$exam_id, $link_id]);
 
     if ($stmtCheck->fetch()) {
         // Already submitted
-        unset($_SESSION['exam_id'], $_SESSION['link_id']);
-        header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
+        unset($_SESSION['exam_id'], $_SESSION['link_id']); // clear exam tracking
+        header("Location: student.php?action=examSubmitted&msg=You+have+already+submitted+this+exam");
         exit;
     }
 
@@ -367,6 +373,7 @@ function submitExam() {
     $stmtNeg->execute([$exam_id]);
     $negative_mark = floatval($stmtNeg->fetchColumn());
 
+    // INSERT RESULT ENTRY
     $stmt = $pdo->prepare("
         INSERT INTO exam_results
             (link_id, exam_id, student_name, student_email, total_marks, obtained_marks, started_at)
@@ -379,10 +386,7 @@ function submitExam() {
         $_SESSION['student_email']
     ]);
 
-    // GET RESULT ID
     $result_id = $pdo->lastInsertId();
-
-    // CHECK IF INSERT FAILED
     if (!$result_id) {
         echo "Result entry missing!";
         exit;
@@ -392,20 +396,15 @@ function submitExam() {
     $total = 0;
 
     foreach ($answers as $question_id => $selected) {
-
-        // FETCH QUESTION DATA
         $stmtQ = $pdo->prepare("SELECT correct_option, marks_per_question FROM questions WHERE question_id = ?");
         $stmtQ->execute([$question_id]);
         $qData = $stmtQ->fetch(PDO::FETCH_ASSOC);
-
         if (!$qData) continue;
 
         $correct_option = $qData['correct_option'];
         $marks = floatval($qData['marks_per_question']);
-
         $total += $marks;
 
-        // RIGHT OR WRONG?
         if ($selected == $correct_option) {
             $score = $marks;
             $is_correct = 1;
@@ -413,10 +412,8 @@ function submitExam() {
             $score = ($negative_mark > 0) ? -$negative_mark : 0;
             $is_correct = 0;
         }
-
         $obtained += $score;
 
-        // INSERT ANSWERS
         $stmtA = $pdo->prepare("
             INSERT INTO exam_answers 
                 (result_id, question_id, selected_option, is_correct)
@@ -433,10 +430,39 @@ function submitExam() {
     ");
     $stmtUpdate->execute([$total, $obtained, $result_id]);
 
-    // CLEAR SESSION
+    // CLEAR ONLY EXAM SESSION (KEEP STUDENT LOGIN)
     unset($_SESSION['exam_id'], $_SESSION['link_id']);
 
-    header("Location: student.php?action=dashboard&msg=Exam+Submitted+Successfully");
+    // Redirect to new "exam submitted" page
+    header("Location: student.php?action=examSubmitted");
     exit;
 }
+
+function examSubmittedPage() {
+    global $pdo;
+
+    $result_id = intval($_GET['result_id'] ?? 0);
+    if (!$result_id) {
+        header("Location: student.php?action=dashboard");
+        exit;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT er.*, e.exam_title 
+        FROM exam_results er
+        JOIN exams e ON er.exam_id = e.exam_id
+        WHERE er.result_id = ?
+    ");
+    $stmt->execute([$result_id]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$result) {
+        header("Location: student.php?action=dashboard");
+        exit;
+    }
+
+   include __DIR__ . '/templates/student/exam_submitted.php';
+
+}
+
+
 ?>
