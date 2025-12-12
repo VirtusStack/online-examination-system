@@ -233,30 +233,43 @@ public static function generateQuestions($pdo, $exam_id)
     // Fetch exam info with difficulty percentages
     $exam = self::getExamById($pdo, $exam_id);
 
+    // Get question sources
     $sources = self::getQuestionSources($pdo, $exam_id);
+
+    // Global selected question IDs (to prevent duplicates)
+    $globalSelected = [];
 
     foreach ($sources as $source) {
 
         $bank_id    = (int)$source['bank_id'];
         $subject_id = (int)$source['subject_id'];
-        $total      = (int)$source['question_limit'];   // total questions for this source
+        $total      = (int)$source['question_limit'];
 
         if ($total <= 0) continue;
 
+        // Calculate difficulty splits
         $easyCount   = round($total * ($exam['easy_percentage'] / 100));
         $mediumCount = round($total * ($exam['medium_percentage'] / 100));
         $hardCount   = $total - ($easyCount + $mediumCount);
 
         $selected = [];
 
-        // Helper function to fetch N random questions
-        $fetchQ = function($difficulty, $limit) use ($pdo, $bank_id, $subject_id) {
+        // Reusable function to fetch questions with exclusion
+        $fetchQ = function($difficulty, $limit) use ($pdo, $bank_id, $subject_id, &$selected, &$globalSelected) {
             if ($limit <= 0) return [];
 
-            $sql = "SELECT question_id 
-                    FROM questions 
-                    WHERE bank_id=? AND subject_id=? AND difficulty=? 
-                    ORDER BY RAND() LIMIT $limit";
+            // Exclude ALL previously selected questions globally + locally
+            $exclude = array_merge($selected, $globalSelected);
+            $excludeSQL = empty($exclude) ? "" : "AND question_id NOT IN (" . implode(",", $exclude) . ")";
+
+            $sql = "
+                SELECT question_id 
+                FROM questions 
+                WHERE bank_id = ? AND subject_id = ? AND difficulty = ?
+                $excludeSQL
+                ORDER BY RAND() 
+                LIMIT $limit
+            ";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$bank_id, $subject_id, $difficulty]);
@@ -264,31 +277,46 @@ public static function generateQuestions($pdo, $exam_id)
             return $stmt->fetchAll(PDO::FETCH_COLUMN);
         };
 
-        // Fetch questions by difficulty
+        // Fetch by difficulty
         $easyQs   = $fetchQ("Easy", $easyCount);
         $mediumQs = $fetchQ("Medium", $mediumCount);
         $hardQs   = $fetchQ("Hard", $hardCount);
 
+        // Merge selected
         $selected = array_merge($easyQs, $mediumQs, $hardQs);
 
-        // Fill shortages if any
+        // Check shortage
         $remaining = $total - count($selected);
         if ($remaining > 0) {
-            $sql = "SELECT question_id 
-                    FROM questions 
-                    WHERE bank_id=? AND subject_id=? 
-                    AND question_id NOT IN (" . (count($selected) ? implode(",", $selected) : "0") . ")
-                    ORDER BY RAND() LIMIT $remaining";
+
+            $exclude = array_merge($selected, $globalSelected);
+            $excludeSQL = empty($exclude) ? "" : "AND question_id NOT IN (" . implode(",", $exclude) . ")";
+
+            $sql = "
+                SELECT question_id 
+                FROM questions 
+                WHERE bank_id = ? AND subject_id = ?
+                $excludeSQL
+                ORDER BY RAND() 
+                LIMIT $remaining
+            ";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$bank_id, $subject_id]);
-            $fallbackQs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $fallback = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-            $selected = array_merge($selected, $fallbackQs);
+            $selected = array_merge($selected, $fallback);
         }
 
+        // Add to GLOBAL list to prevent duplicates across whole exam
+        $globalSelected = array_merge($globalSelected, $selected);
+
         // Insert into exam_questions
-        $insert = $pdo->prepare("INSERT INTO exam_questions (exam_id, question_id) VALUES (?, ?)");
+        $insert = $pdo->prepare("
+            INSERT INTO exam_questions (exam_id, question_id)
+            VALUES (?, ?)
+        ");
+
         foreach ($selected as $qid) {
             $insert->execute([$exam_id, $qid]);
         }
