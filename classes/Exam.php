@@ -231,12 +231,12 @@ public static function generateQuestions($pdo, $exam_id)
     $stmt->execute([$exam_id]);
 
     // Fetch exam info with difficulty percentages
-    $exam = self::getExamById($pdo, $exam_id);
+    $exam = self::getById($pdo, $exam_id);
 
     // Get question sources
     $sources = self::getQuestionSources($pdo, $exam_id);
 
-    // Global selected question IDs (to prevent duplicates)
+    // Global selected question IDs (prevents duplicates across entire exam)
     $globalSelected = [];
 
     foreach ($sources as $source) {
@@ -247,60 +247,80 @@ public static function generateQuestions($pdo, $exam_id)
 
         if ($total <= 0) continue;
 
-        // Calculate difficulty splits
-        $easyCount   = round($total * ($exam['easy_percentage'] / 100));
-        $mediumCount = round($total * ($exam['medium_percentage'] / 100));
-        $hardCount   = $total - ($easyCount + $mediumCount);
+        // Count available questions in this bank+subject
+        $countStmt = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM questions 
+            WHERE bank_id = ? AND subject_id = ?
+        ");
+        $countStmt->execute([$bank_id, $subject_id]);
+        $available = (int)$countStmt->fetchColumn();
+
+        if ($available < $total) {
+            die("
+                <h3 style='color:red'>
+                Not enough questions available.<br>
+                Bank ID: {$bank_id}<br>
+                Subject ID: {$subject_id}<br>
+                Required: {$total}<br>
+                Available: {$available}
+                </h3>
+            ");
+        }
+
+        // Difficulty split using floor() to avoid rounding errors
+        $easyCount   = floor($total * ($exam['easy_percentage'] / 100));
+        $mediumCount = floor($total * ($exam['medium_percentage'] / 100));
+        $hardCount   = $total - ($easyCount + $mediumCount); // ensure total matches
 
         $selected = [];
 
-        // Reusable function to fetch questions with exclusion
-        $fetchQ = function($difficulty, $limit) use ($pdo, $bank_id, $subject_id, &$selected, &$globalSelected) {
+        // Helper to fetch questions by difficulty
+        $fetchQ = function ($difficulty, $limit) use ($pdo, $bank_id, $subject_id, &$selected, &$globalSelected) {
             if ($limit <= 0) return [];
 
-            // Exclude ALL previously selected questions globally + locally
             $exclude = array_merge($selected, $globalSelected);
             $excludeSQL = empty($exclude) ? "" : "AND question_id NOT IN (" . implode(",", $exclude) . ")";
 
             $sql = "
-                SELECT question_id 
-                FROM questions 
-                WHERE bank_id = ? AND subject_id = ? AND difficulty = ?
-                $excludeSQL
-                ORDER BY RAND() 
+                SELECT question_id
+                FROM questions
+                WHERE bank_id = ?
+                  AND subject_id = ?
+                  AND difficulty = ?
+                  $excludeSQL
+                ORDER BY RAND()
                 LIMIT $limit
             ";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$bank_id, $subject_id, $difficulty]);
-
             return $stmt->fetchAll(PDO::FETCH_COLUMN);
         };
 
-        // Fetch by difficulty
+        // Fetch questions by difficulty
         $easyQs   = $fetchQ("Easy", $easyCount);
         $mediumQs = $fetchQ("Medium", $mediumCount);
         $hardQs   = $fetchQ("Hard", $hardCount);
 
-        // Merge selected
         $selected = array_merge($easyQs, $mediumQs, $hardQs);
 
-        // Check shortage
+        // Check if we still need more questions to reach total
         $remaining = $total - count($selected);
         if ($remaining > 0) {
-
-            $exclude = array_merge($selected, $globalSelected);
+            // Fallback: fetch any questions from this bank+subject, including ones already used in this source
+            $exclude = $globalSelected; // only exclude already used globally
             $excludeSQL = empty($exclude) ? "" : "AND question_id NOT IN (" . implode(",", $exclude) . ")";
 
             $sql = "
-                SELECT question_id 
-                FROM questions 
-                WHERE bank_id = ? AND subject_id = ?
-                $excludeSQL
-                ORDER BY RAND() 
+                SELECT question_id
+                FROM questions
+                WHERE bank_id = ?
+                  AND subject_id = ?
+                  $excludeSQL
+                ORDER BY RAND()
                 LIMIT $remaining
             ";
-
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$bank_id, $subject_id]);
             $fallback = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -308,7 +328,10 @@ public static function generateQuestions($pdo, $exam_id)
             $selected = array_merge($selected, $fallback);
         }
 
-        // Add to GLOBAL list to prevent duplicates across whole exam
+        // Ensure exact total (deduplicate within this source)
+        $selected = array_slice(array_unique($selected), 0, $total);
+
+        // Add to global list to prevent repeats across sources
         $globalSelected = array_merge($globalSelected, $selected);
 
         // Insert into exam_questions
@@ -316,13 +339,11 @@ public static function generateQuestions($pdo, $exam_id)
             INSERT INTO exam_questions (exam_id, question_id)
             VALUES (?, ?)
         ");
-
         foreach ($selected as $qid) {
             $insert->execute([$exam_id, $qid]);
         }
     }
 }
-
 
      // Fetch exam details for a specific student 
      public static function getExamForStudent($pdo, $exam_id, $student_id = 0) {
