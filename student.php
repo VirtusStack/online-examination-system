@@ -27,7 +27,7 @@ if (!isset($_SESSION['student_id']) && isset($_COOKIE['remember_student'])) {
 }
 
 // ROUTING
-$action = $_GET['action'] ?? 'login';
+$action = $_GET['action'] ?? (isset($_SESSION['student_id']) ? 'dashboard' : 'login');
 
 // Force login if not logged in
 if (!isset($_SESSION['student_id']) && $action !== 'login') {
@@ -68,8 +68,9 @@ switch ($action) {
 
     // Exam submitted page
     case 'examSubmitted':
-        include __DIR__ . '/templates/student/exam_submitted.php';
-        break;
+    examSubmittedPage();
+    break;
+
 }
 
 // FUNCTION DEFINITIONS
@@ -234,16 +235,43 @@ function startExam() {
         exit;
     }
 
-    // UPDATE started_at
-    // This ensures started_at becomes actual time when the student begins exam
+    /* =====================================================
+       CREATE exam_results ROW IF NOT EXISTS (IMPORTANT FIX)
+       ===================================================== */
+    $stmtCheck = $pdo->prepare("
+        SELECT result_id 
+        FROM exam_results 
+        WHERE exam_id = ? AND link_id = ?
+        LIMIT 1
+    ");
+    $stmtCheck->execute([$exam_id, $link_id]);
+    $result_id = $stmtCheck->fetchColumn();
+
+    if (!$result_id) {
+        $stmtInsert = $pdo->prepare("
+            INSERT INTO exam_results 
+                (exam_id, link_id, student_name, student_email, started_at)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+        $stmtInsert->execute([
+            $exam_id,
+            $link_id,
+            $_SESSION['student_name'],
+            $_SESSION['student_email']
+        ]);
+    }
+
+    // UPDATE started_at ONLY IF NULL
     $stmtStart = $pdo->prepare("
         UPDATE exam_results
         SET started_at = NOW()
-        WHERE exam_id = ? AND link_id = ? AND started_at IS NULL
+        WHERE exam_id = ? 
+          AND link_id = ? 
+          AND started_at IS NULL
     ");
     $stmtStart->execute([$exam_id, $link_id]);
-  
-    //  FETCH SUBJECTS FROM exam_question_sources
+
+    // FETCH SUBJECTS FROM exam_question_sources
     $stmtSub = $pdo->prepare("
         SELECT DISTINCT s.subject_name
         FROM exam_question_sources eqs
@@ -341,7 +369,6 @@ function liveExam() {
 function submitExam() {
     global $pdo;
 
-    // SESSION VALUES
     $exam_id = $_SESSION['exam_id'] ?? 0;
     $link_id = $_SESSION['link_id'] ?? 0;
 
@@ -350,48 +377,26 @@ function submitExam() {
         exit;
     }
 
-    // CHECK IF ALREADY SUBMITTED
-    $stmtCheck = $pdo->prepare("
+    // Fetch existing result row
+    $stmtRes = $pdo->prepare("
         SELECT result_id 
         FROM exam_results 
-        WHERE exam_id = ? 
-          AND link_id = ? 
-          AND submitted_at IS NOT NULL
+        WHERE exam_id = ? AND link_id = ?
+        LIMIT 1
     ");
-    $stmtCheck->execute([$exam_id, $link_id]);
+    $stmtRes->execute([$exam_id, $link_id]);
+    $result_id = $stmtRes->fetchColumn();
 
-    if ($stmtCheck->fetch()) {
-        // Already submitted
-        unset($_SESSION['exam_id'], $_SESSION['link_id']); // clear exam tracking
-        header("Location: student.php?action=examSubmitted&msg=You+have+already+submitted+this+exam");
+    if (!$result_id) {
+        echo "Exam result record not found!";
         exit;
     }
 
     $answers = $_POST['answers'] ?? [];
 
-    // GET NEGATIVE MARKING
     $stmtNeg = $pdo->prepare("SELECT negative_marking FROM exams WHERE exam_id = ?");
     $stmtNeg->execute([$exam_id]);
     $negative_mark = floatval($stmtNeg->fetchColumn());
-
-    // INSERT RESULT ENTRY
-    $stmt = $pdo->prepare("
-        INSERT INTO exam_results
-            (link_id, exam_id, student_name, student_email, total_marks, obtained_marks, started_at)
-        VALUES (?, ?, ?, ?, 0, 0, NOW())
-    ");
-    $stmt->execute([
-        $link_id,
-        $exam_id,
-        $_SESSION['student_name'],
-        $_SESSION['student_email']
-    ]);
-
-    $result_id = $pdo->lastInsertId();
-    if (!$result_id) {
-        echo "Result entry missing!";
-        exit;
-    }
 
     $obtained = 0;
     $total = 0;
@@ -402,28 +407,21 @@ function submitExam() {
         $qData = $stmtQ->fetch(PDO::FETCH_ASSOC);
         if (!$qData) continue;
 
-        $correct_option = $qData['correct_option'];
         $marks = floatval($qData['marks_per_question']);
         $total += $marks;
 
-        if ($selected == $correct_option) {
-            $score = $marks;
-            $is_correct = 1;
-        } else {
-            $score = ($negative_mark > 0) ? -$negative_mark : 0;
-            $is_correct = 0;
-        }
+        $is_correct = ($selected == $qData['correct_option']) ? 1 : 0;
+        $score = $is_correct ? $marks : (($negative_mark > 0) ? -$negative_mark : 0);
+
         $obtained += $score;
 
         $stmtA = $pdo->prepare("
-            INSERT INTO exam_answers 
-                (result_id, question_id, selected_option, is_correct)
+            INSERT INTO exam_answers (result_id, question_id, selected_option, is_correct)
             VALUES (?, ?, ?, ?)
         ");
         $stmtA->execute([$result_id, $question_id, $selected, $is_correct]);
     }
 
-    // UPDATE RESULT MARKS + SUBMIT TIME
     $stmtUpdate = $pdo->prepare("
         UPDATE exam_results
         SET total_marks = ?, obtained_marks = ?, submitted_at = NOW()
@@ -431,13 +429,13 @@ function submitExam() {
     ");
     $stmtUpdate->execute([$total, $obtained, $result_id]);
 
-    // CLEAR ONLY EXAM SESSION (KEEP STUDENT LOGIN)
+    // Clear ONLY exam tracking
     unset($_SESSION['exam_id'], $_SESSION['link_id']);
 
-    // Redirect to new "exam submitted" page
-    header("Location: student.php?action=examSubmitted");
+    header("Location: student.php?action=examSubmitted&result_id=" . $result_id);
     exit;
 }
+
 
 // Exam submitted page
 function examSubmittedPage() {
