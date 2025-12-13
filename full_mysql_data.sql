@@ -75,7 +75,7 @@ INSERT INTO `exams` (`exam_id`, `exam_title`, `exam_description`, `total_questio
 (4, 'GK Midterm Exam', 'Current Affairs and General Knowledge', 30, 0.00, 0.00, 30, 1, 1, '2025-12-04 14:00:00', '2025-12-04 19:30:00', 0.00, 'Inactive', 'class', NULL, '2025-12-03 16:01:14', 70, 20, 10),
 (6, 'mix', 'Biology and Gk', 30, 0.00, 0.00, 30, 1, 1, '2025-12-04 18:18:00', '2025-12-04 19:30:00', 0.00, 'Inactive', 'class', NULL, '2025-12-03 20:19:58', 0, 0, 0),
 (7, 'Commerce', 'Business Studies and Economics', 30, 0.00, 0.00, 30, 1, 1, '2025-12-06 12:20:00', '2025-12-06 19:30:00', 0.00, 'Inactive', 'class', NULL, '2025-12-03 21:09:51', 60, 30, 10),
-(8, 'Science', 'biology and chemistry', 20, 0.00, 0.00, 30, 1, 1, '2025-12-06 10:00:00', '2025-12-06 19:34:00', 0.00, 'Inactive', 'class', NULL, '2025-12-03 21:34:33', 70, 25, 5),
+(8, 'Science', 'biology and chemistry', 20, 20.00, 7.00, 30, 1, 1, '2025-12-13 10:00:00', '2025-12-13 19:34:00', 0.00, 'Inactive', 'class', NULL, '2025-12-03 21:34:33', 60, 20, 20),
 (9, 'Science exam', 'Biology and Physics', 20, 0.00, 0.00, 30, 1, 1, '2025-12-09 10:30:00', '2025-12-09 19:30:00', 0.00, 'Inactive', 'class', NULL, '2025-12-04 12:31:10', 60, 30, 10),
 (10, 'Art', 'GK and Current Affairs', 30, 0.00, 0.00, 30, 1, 1, '2025-12-08 11:00:00', '2025-12-08 19:28:00', 0.00, 'Inactive', 'class', NULL, '2025-12-04 14:23:19', 60, 30, 10),
 (11, 'Gk', 'General Knowledge', 10, 10.00, 4.00, 30, 1, 0, '2025-12-06 12:10:00', '2025-12-06 18:00:00', 0.00, 'Inactive', 'class', NULL, '2025-12-05 14:47:13', 70, 20, 10),
@@ -151,24 +151,6 @@ INSERT INTO `exam_answers` (`id`, `result_id`, `question_id`, `selected_option`,
 (91, 8, 124, 'A', 1),
 (92, 8, 132, 'A', 1),
 (93, 8, 130, 'A', 1),
-(94, 9, 47, 'B', 0),
-(95, 9, 50, 'A', 1),
-(96, 9, 59, 'A', 1),
-(97, 9, 56, 'B', 0),
-(98, 9, 41, 'A', 1),
-(99, 9, 43, 'A', 1),
-(100, 9, 58, 'C', 0),
-(101, 9, 60, 'A', 1),
-(102, 9, 45, 'A', 1),
-(103, 9, 11, 'A', 1),
-(104, 9, 12, 'A', 1),
-(105, 9, 6, 'A', 1),
-(106, 9, 8, 'A', 1),
-(107, 9, 4, 'A', 1),
-(108, 9, 18, 'A', 1),
-(109, 9, 20, 'C', 0),
-(110, 9, 17, 'D', 0),
-(111, 9, 7, 'A', 1),
 (112, 10, 102, 'A', 1),
 (113, 10, 116, 'A', 1),
 (114, 10, 105, 'D', 0),
@@ -218,24 +200,6 @@ INSERT INTO `exam_answers` (`id`, `result_id`, `question_id`, `selected_option`,
 (165, 13, 95, 'A', 1),
 (166, 13, 90, 'B', 0),
 (167, 13, 86, 'B', 0),
-(168, 14, 50, 'A', 1),
-(169, 14, 47, 'B', 0),
-(170, 14, 48, 'B', 0),
-(171, 14, 41, 'A', 1),
-(172, 14, 56, 'A', 1),
-(173, 14, 43, 'A', 1),
-(174, 14, 59, 'A', 1),
-(175, 14, 60, 'A', 1),
-(176, 14, 55, 'C', 1),
-(177, 14, 12, 'A', 1),
-(178, 14, 2, 'B', 0),
-(179, 14, 13, 'A', 1),
-(180, 14, 10, 'A', 1),
-(181, 14, 20, 'C', 0),
-(182, 14, 6, 'A', 1),
-(183, 14, 4, 'A', 1),
-(184, 14, 14, 'D', 0),
-(185, 14, 5, 'B', 0),
 (205, 16, 23, 'D', 0),
 (206, 16, 21, 'A', 1),
 (207, 16, 26, 'A', 1),
@@ -292,7 +256,45 @@ INSERT INTO `exam_answers` (`id`, `result_id`, `question_id`, `selected_option`,
 (275, 21, 27, 'A', 1),
 (276, 21, 35, 'A', 1),
 (277, 21, 32, 'A', 1),
-(278, 21, 22, 'A', 1);
+(278, 21, 22, 'A', 1),
+(315, 25, 8, 'B', 0),
+(316, 25, 55, 'C', 1),
+(317, 25, 52, 'A', 1),
+(318, 25, 53, 'A', 1),
+(319, 25, 4, 'B', 0),
+(320, 25, 58, 'A', 1),
+(321, 25, 41, 'A', 1),
+(322, 25, 44, 'A', 1),
+(323, 25, 12, 'A', 1),
+(324, 25, 3, 'A', 1),
+(325, 25, 48, 'A', 1),
+(326, 25, 20, 'A', 1),
+(327, 25, 59, 'A', 1),
+(328, 25, 18, 'A', 1),
+(329, 25, 54, 'B', 0),
+(330, 25, 10, 'B', 0),
+(331, 25, 43, 'A', 1),
+(332, 25, 17, 'C', 0),
+(333, 25, 2, 'D', 0),
+(334, 26, 54, 'C', 0),
+(335, 26, 4, 'C', 0),
+(336, 26, 17, 'B', 0),
+(337, 26, 58, 'A', 1),
+(338, 26, 10, 'A', 1),
+(339, 26, 43, 'A', 1),
+(340, 26, 44, 'B', 0),
+(341, 26, 48, 'A', 1),
+(342, 26, 52, 'A', 1),
+(343, 26, 53, 'A', 1),
+(344, 26, 8, 'A', 1),
+(345, 26, 59, 'A', 1),
+(346, 26, 55, 'C', 1),
+(347, 26, 3, 'A', 1),
+(348, 26, 2, 'A', 1),
+(349, 26, 41, 'A', 1),
+(350, 26, 20, 'A', 1),
+(351, 26, 12, 'C', 0),
+(352, 26, 18, 'A', 1);
 
 -- --------------------------------------------------------
 
@@ -327,10 +329,6 @@ INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
 (87, 6, 2),
 (88, 6, 9),
 (89, 6, 10),
-(143, 8, 1),
-(144, 8, 2),
-(145, 8, 9),
-(146, 8, 10),
 (151, 7, 1),
 (152, 7, 2),
 (153, 7, 9),
@@ -359,7 +357,12 @@ INSERT INTO `exam_assigned_students` (`id`, `exam_id`, `student_id`) VALUES
 (231, 12, 2),
 (232, 12, 9),
 (233, 12, 10),
-(234, 12, 11);
+(234, 12, 11),
+(245, 8, 1),
+(246, 8, 2),
+(247, 8, 9),
+(248, 8, 10),
+(249, 8, 11);
 
 -- --------------------------------------------------------
 
@@ -410,11 +413,11 @@ INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `stud
 (33, 7, 'exam_69318f27704447.67883235', NULL, 'Isla Adams', 'isla@example.com', NULL, '2025-12-06 17:41:00', 0, '2025-12-03 21:09:51'),
 (34, 7, 'exam_69318f277266e9.47907509', NULL, 'Jack Baker', 'jack@example.com', NULL, '2025-12-06 17:41:00', 0, '2025-12-03 21:09:51'),
 (35, 7, 'exam-7-eea92ca9', NULL, NULL, NULL, NULL, '2025-12-06 17:41:00', 0, '2025-12-03 21:09:51'),
-(36, 8, 'exam_693194f171d2d6.38351520', NULL, 'Alice Smith', 'alice@example.com', NULL, '0000-00-00 00:00:00', 0, '2025-12-03 21:34:33'),
-(37, 8, 'exam_693194f173cd51.29926238', NULL, 'Bob Johnson', 'bob@example.com', NULL, '0000-00-00 00:00:00', 0, '2025-12-03 21:34:33'),
-(38, 8, 'exam_693194f1751183.86502391', NULL, 'Isla Adams', 'isla@example.com', NULL, '0000-00-00 00:00:00', 0, '2025-12-03 21:34:33'),
-(39, 8, 'exam_693194f176cd16.26821545', NULL, 'Jack Baker', 'jack@example.com', NULL, '0000-00-00 00:00:00', 0, '2025-12-03 21:34:33'),
-(40, 8, 'exam-8-bbe47086', NULL, NULL, NULL, NULL, '0000-00-00 00:00:00', 0, '2025-12-03 21:34:33'),
+(36, 8, 'exam_693194f171d2d6.38351520', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', 'Alice Smith', 'alice@example.com', NULL, '2025-12-13 14:24:00', 0, '2025-12-03 21:34:33'),
+(37, 8, 'exam_693194f173cd51.29926238', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-13 14:24:00', 0, '2025-12-03 21:34:33'),
+(38, 8, 'exam_693194f1751183.86502391', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', 'Isla Adams', 'isla@example.com', NULL, '2025-12-13 14:24:00', 0, '2025-12-03 21:34:33'),
+(39, 8, 'exam_693194f176cd16.26821545', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', 'Jack Baker', 'jack@example.com', NULL, '2025-12-13 14:24:00', 0, '2025-12-03 21:34:33'),
+(40, 8, 'exam-8-bbe47086', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', NULL, NULL, NULL, '2025-12-13 14:24:00', 0, '2025-12-03 21:34:33'),
 (41, 9, 'exam_69326716561ea0.90367878', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Alice Smith', 'alice@example.com', NULL, '2025-12-09 19:00:00', 0, '2025-12-04 12:31:10'),
 (42, 9, 'exam_69326716573042.16669386', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-09 19:00:00', 0, '2025-12-04 12:31:10'),
 (43, 9, 'exam_693267165892b6.32140913', '$2y$10$mghvRu7zXzVglik31BzH.OiCtiFQdS65dqqI5GVNCcdBYIiUX0E.O', 'Isla Adams', 'isla@example.com', NULL, '2025-12-09 19:00:00', 0, '2025-12-04 12:31:10'),
@@ -437,7 +440,8 @@ INSERT INTO `exam_links` (`link_id`, `exam_id`, `unique_link`, `password`, `stud
 (65, 12, 'exam_6937fc1c49e604.14573940', '$2y$10$wLZr/ykz9k.L8RQcKFGZauLOyFt73etYFKZfMx7/C1X3yTHVZI4P.', 'Bob Johnson', 'bob@example.com', NULL, '2025-12-13 16:56:00', 0, '2025-12-08 18:08:20'),
 (66, 12, 'exam_6937fc1c4b09b9.61425980', '$2y$10$wLZr/ykz9k.L8RQcKFGZauLOyFt73etYFKZfMx7/C1X3yTHVZI4P.', 'Isla Adams', 'isla@example.com', NULL, '2025-12-13 16:56:00', 0, '2025-12-08 18:08:20'),
 (67, 12, 'exam_6937fc1c4d5097.14844949', '$2y$10$wLZr/ykz9k.L8RQcKFGZauLOyFt73etYFKZfMx7/C1X3yTHVZI4P.', 'Jack Baker', 'jack@example.com', NULL, '2025-12-13 16:56:00', 0, '2025-12-08 18:08:20'),
-(68, 12, 'exam_693bc39eed7963.73523091', '$2y$10$wLZr/ykz9k.L8RQcKFGZauLOyFt73etYFKZfMx7/C1X3yTHVZI4P.', 'Martin Smith', 'martin@example.com', NULL, '2025-12-13 16:56:00', 0, '2025-12-11 20:26:22');
+(68, 12, 'exam_693bc39eed7963.73523091', '$2y$10$wLZr/ykz9k.L8RQcKFGZauLOyFt73etYFKZfMx7/C1X3yTHVZI4P.', 'Martin Smith', 'martin@example.com', NULL, '2025-12-13 16:56:00', 0, '2025-12-11 20:26:22'),
+(69, 8, 'exam_693cff8b0c7d20.07712686', '$2y$10$.NAoOX4IzC25GoS79T0fXOT/0LJ1N22QRa.HoWwTOI.dcW7eI1md2', 'Martin Smith', 'martin@example.com', NULL, '2025-12-13 14:24:00', 0, '2025-12-13 05:54:19');
 
 -- --------------------------------------------------------
 
@@ -481,7 +485,27 @@ INSERT INTO `exam_questions` (`id`, `exam_id`, `question_id`) VALUES
 (703, 4, 126),
 (704, 4, 128),
 (705, 4, 135),
-(706, 4, 131);
+(706, 4, 131),
+(767, 8, 44),
+(768, 8, 48),
+(769, 8, 43),
+(770, 8, 59),
+(771, 8, 52),
+(772, 8, 53),
+(773, 8, 41),
+(774, 8, 54),
+(775, 8, 58),
+(776, 8, 55),
+(777, 8, 20),
+(778, 8, 2),
+(779, 8, 8),
+(780, 8, 3),
+(781, 8, 17),
+(782, 8, 12),
+(783, 8, 4),
+(784, 8, 18),
+(785, 8, 10),
+(786, 8, 16);
 
 -- --------------------------------------------------------
 
@@ -512,12 +536,6 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (81, 6, 1, 3, 'Easy', 9),
 (82, 6, 1, 3, 'Medium', 4),
 (83, 6, 1, 3, 'Hard', 2),
-(153, 8, 1, 3, 'Easy', 7),
-(154, 8, 1, 3, 'Medium', 2),
-(155, 8, 1, 3, 'Hard', 1),
-(156, 8, 1, 1, 'Easy', 7),
-(157, 8, 1, 1, 'Medium', 2),
-(158, 8, 1, 1, 'Hard', 1),
 (165, 7, 2, 6, 'Easy', 9),
 (166, 7, 2, 6, 'Medium', 4),
 (167, 7, 2, 6, 'Hard', 2),
@@ -554,7 +572,13 @@ INSERT INTO `exam_question_sources` (`id`, `exam_id`, `bank_id`, `subject_id`, `
 (237, 11, 3, 7, 'Hard', 1),
 (253, 12, 1, 2, 'Easy', 6),
 (254, 12, 1, 2, 'Medium', 2),
-(255, 12, 1, 2, 'Hard', 2);
+(255, 12, 1, 2, 'Hard', 2),
+(268, 8, 1, 3, 'Easy', 6),
+(269, 8, 1, 3, 'Medium', 2),
+(270, 8, 1, 3, 'Hard', 2),
+(271, 8, 1, 1, 'Easy', 6),
+(272, 8, 1, 1, 'Medium', 2),
+(273, 8, 1, 1, 'Hard', 2);
 
 -- --------------------------------------------------------
 
@@ -583,15 +607,16 @@ INSERT INTO `exam_results` (`result_id`, `link_id`, `exam_id`, `student_name`, `
 (5, 41, 9, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-06 13:11:35', '2025-12-06 13:11:35'),
 (7, 47, 10, 'Bob Johnson', 'bob@example.com', 0.00, 0.00, '2025-12-06 13:24:54', '2025-12-06 13:24:54'),
 (8, 57, 11, 'Bob Johnson', 'bob@example.com', 0.00, 0.00, '2025-12-06 14:04:36', '2025-12-06 14:04:36'),
-(9, 37, 8, 'Bob Johnson', 'bob@example.com', 0.00, 0.00, '2025-12-06 14:13:14', '2025-12-06 14:13:14'),
 (10, 32, 7, 'Bob Johnson', 'bob@example.com', 0.00, 0.00, '2025-12-06 14:42:13', '2025-12-06 14:42:13'),
 (12, 42, 9, 'Bob Johnson', 'bob@example.com', 0.00, 0.00, '2025-12-06 15:14:44', '2025-12-06 15:14:44'),
 (13, 31, 7, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-06 15:31:19', '2025-12-06 15:31:19'),
-(14, 36, 8, 'Alice Smith', 'alice@example.com', 0.00, 0.00, '2025-12-06 15:35:17', '2025-12-06 15:35:17'),
 (16, 64, 12, 'Alice Smith', 'alice@example.com', 20.00, 18.00, '2025-12-12 13:27:53', '2025-12-12 13:27:53'),
 (17, 67, 12, 'Jack Baker', 'jack@example.com', 19.00, 17.00, '2025-12-12 13:29:47', '2025-12-12 13:29:47'),
 (20, 68, 12, 'Martin Smith', 'martin@example.com', 9.00, 9.00, '2025-12-13 11:01:03', '2025-12-13 11:01:35'),
-(21, 65, 12, 'Bob Johnson', 'bob@example.com', 9.00, 9.00, '2025-12-13 11:05:46', '2025-12-13 11:06:17');
+(21, 65, 12, 'Bob Johnson', 'bob@example.com', 9.00, 9.00, '2025-12-13 11:05:46', '2025-12-13 11:06:17'),
+(22, 69, 8, 'Martin Smith', 'martin@example.com', 20.00, 0.00, NULL, NULL),
+(25, 37, 8, 'Bob Johnson', 'bob@example.com', 19.00, 13.00, '2025-12-13 11:39:59', '2025-12-13 12:08:26'),
+(26, 36, 8, 'Alice Smith', 'alice@example.com', 19.00, 14.00, '2025-12-13 12:16:33', '2025-12-13 12:20:52');
 
 -- --------------------------------------------------------
 
@@ -671,7 +696,7 @@ INSERT INTO `questions` (`question_id`, `bank_id`, `subject_id`, `question_text`
 (51, 1, 3, 'Which disease is waterborne?', 'Cholera', 'TB', 'AIDS', 'Cancer', 'A', 1.00, 'Medium'),
 (52, 1, 3, 'Which is a plant hormone?', 'Auxin', 'Insulin', 'Adrenaline', 'Thyroxine', 'A', 1.00, 'Medium'),
 (53, 1, 3, 'Site of digestion?', 'Small intestine', 'Large intestine', 'Stomach', 'Mouth', 'A', 1.00, 'Hard'),
-(54, 1, 3, 'Seeds are formed in?', 'Flower', 'Root', 'Stem', 'Leaf', 'A', 1.00, 'Easy'),
+(54, 1, 3, 'Seeds are formed in?', 'Flower', 'Root', 'Stem', 'Leaf', 'A', 1.00, 'Hard'),
 (55, 1, 3, 'Mosquito spreads?', 'Malaria', 'Dengue', 'All of these', 'None', 'C', 1.00, 'Medium'),
 (56, 1, 3, 'Sugar stored in plants is?', 'Starch', 'Sucrose', 'Glucose', 'Fructose', 'A', 1.00, 'Easy'),
 (57, 1, 3, 'Nervous system unit?', 'Neuron', 'Axon', 'Dendrite', 'Brain', 'A', 1.00, 'Medium'),
@@ -1021,37 +1046,37 @@ ALTER TABLE `exams`
 -- AUTO_INCREMENT for table `exam_answers`
 --
 ALTER TABLE `exam_answers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=279;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=353;
 
 --
 -- AUTO_INCREMENT for table `exam_assigned_students`
 --
 ALTER TABLE `exam_assigned_students`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=235;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=250;
 
 --
 -- AUTO_INCREMENT for table `exam_links`
 --
 ALTER TABLE `exam_links`
-  MODIFY `link_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `link_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
 -- AUTO_INCREMENT for table `exam_questions`
 --
 ALTER TABLE `exam_questions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=767;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=787;
 
 --
 -- AUTO_INCREMENT for table `exam_question_sources`
 --
 ALTER TABLE `exam_question_sources`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=256;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=274;
 
 --
 -- AUTO_INCREMENT for table `exam_results`
 --
 ALTER TABLE `exam_results`
-  MODIFY `result_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `result_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `questions`
@@ -1133,3 +1158,4 @@ ALTER TABLE `questions`
 ALTER TABLE `students`
   ADD CONSTRAINT `fk_student_class` FOREIGN KEY (`class_id`) REFERENCES `classrooms` (`class_id`) ON DELETE CASCADE;
 COMMIT;
+
