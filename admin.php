@@ -637,9 +637,9 @@ function newExam() {
                 'exam_title'        => $exam_title,
                 'exam_description'  => $exam_description,
                 'duration_minutes'  => $duration_minutes,
-                'total_questions'   => $total_questions,
 
                 // NEW FIELDS ADDED HERE
+                'total_questions'   => $total_questions,
                 'total_marks'       => $total_marks,
                 'pass_marks'        => $pass_marks,
 
@@ -692,6 +692,12 @@ function newExam() {
                 Exam::createExamLink($pdo, $exam_id, $link, $password, $expires_at);
 
                 $results['exam_link'] = BASE_URL . "student.php?action=startExam&link=" . $link;
+
+                // --------------------------
+                // Generate exam questions (CRUCIAL)
+                // --------------------------
+                Exam::generateQuestions($pdo, $exam_id);
+
                 $results['message'] = "Exam created successfully! Total Questions: $total_questions";
             } else {
                 $results['message'] = "Error creating exam!";
@@ -958,6 +964,16 @@ function editExam() {
             }
 
             // --------------------------
+            // Regenerate exam questions (with shuffle options)
+            // --------------------------
+            $examDetails = Exam::getById($pdo, $exam_id);
+            if ($examDetails) {
+                $examDetails['shuffle_questions'] = $shuffle_questions;
+                $examDetails['shuffle_options']   = $shuffle_options;
+                Exam::generateQuestions($pdo, $exam_id);
+            }
+
+            // --------------------------
             // Update exam link password + expiry
             // --------------------------
             $password   = $_POST['exam_password'] ?? '';
@@ -1012,7 +1028,6 @@ function editExam() {
 
     require(TEMPLATE_PATH . "/exams/edit_exam.php");
 }
-
 
 // -------------------------
 // CLASSROOM MANAGEMENT
