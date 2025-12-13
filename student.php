@@ -303,12 +303,15 @@ function liveExam() {
         exit;
     }
 
-    // BLOCK IF ALREADY SUBMITTED
-    // ---------------------------------------------------
-    // Only block if the exam_results row has submitted_at filled
+    /* =====================================================
+       BLOCK IF ALREADY SUBMITTED
+    ===================================================== */
     $check = $pdo->prepare("
-        SELECT 1 FROM exam_results 
-        WHERE exam_id = ? AND link_id = ? AND submitted_at IS NOT NULL
+        SELECT 1 
+        FROM exam_results 
+        WHERE exam_id = ? 
+          AND link_id = ? 
+          AND submitted_at IS NOT NULL
     ");
     $check->execute([$exam_id, $link_id]);
 
@@ -316,41 +319,27 @@ function liveExam() {
         header("Location: student.php?action=dashboard&msg=You+have+already+submitted+this+exam");
         exit;
     }
-    // ---------------------------------------------------
 
-    // FETCH QUESTIONS
+    $stmtExam = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ? LIMIT 1");
+    $stmtExam->execute([$exam_id]);
+    $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
+
     $stmt = $pdo->prepare("
-        SELECT bank_id, subject_id, difficulty, question_limit
-        FROM exam_question_sources
-        WHERE exam_id = ?
+        SELECT q.*
+        FROM exam_questions eq
+        INNER JOIN questions q ON q.question_id = eq.question_id
+        WHERE eq.exam_id = ?
+        ORDER BY eq.id ASC
     ");
     $stmt->execute([$exam_id]);
-    $sources = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $questions = [];
-
-    foreach ($sources as $src) {
-        $sql = "
-            SELECT q.*
-            FROM questions q
-            WHERE q.bank_id = ?
-              AND q.subject_id = ?
-        ";
-
-        if (!empty($src['difficulty'])) {
-            $sql .= " AND q.difficulty = " . $pdo->quote($src['difficulty']);
-        }
-
-        $sql .= " ORDER BY RAND() LIMIT " . intval($src['question_limit']);
-
-        $stmtQ = $pdo->prepare($sql);
-        $stmtQ->execute([$src['bank_id'], $src['subject_id']]);
-
-        $picked = $stmtQ->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($picked as $q) {
-            $questions[] = $q;
-        }
+    /* =====================================================
+       SAFETY CHECK
+    ===================================================== */
+    if (empty($questions)) {
+        echo "No questions found for this exam. Please contact admin.";
+        exit;
     }
 
     foreach ($questions as &$q) {
@@ -360,9 +349,33 @@ function liveExam() {
             'C' => $q['option_c'],
             'D' => $q['option_d']
         ];
+
+        // Shuffle options if enabled
+        if (!empty($exam['shuffle_options'])) {
+            $q['options'] = shuffle_assoc($q['options']);
+        }
     }
-      shuffle($questions);
+
+    // Shuffle questions if enabled
+    if (!empty($exam['shuffle_questions'])) {
+        shuffle($questions);
+    }
+
+    // LOAD VIEW
     require(__DIR__ . "/templates/student/live_exam.php");
+}
+
+
+ //Helper function to shuffle associative arrays
+
+function shuffle_assoc($array) {
+    $keys = array_keys($array);
+    shuffle($keys);
+    $shuffled = [];
+    foreach ($keys as $key) {
+        $shuffled[$key] = $array[$key];
+    }
+    return $shuffled;
 }
 
 // submit exam
