@@ -95,13 +95,18 @@ if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Set timezone
                 $conn->query("SET time_zone = '$timezone'");
 
-                // Import main database safely
-                run_sql_file($conn, __DIR__ . '/database.sql');
+               // Import main database safely
+		run_sql_file($conn, __DIR__ . '/database.sql');
 
-                // Import dummy data safely if selected
-                if ($install_dummy) {
-                    run_sql_file($conn, __DIR__ . '/dummy.sql');
-                }
+		// Core data (safe for multiple runs)
+		run_sql_file($conn, __DIR__ . '/dummy_core.sql');
+
+	       // Exams (only if empty)
+		$check = $conn->query("SELECT COUNT(*) AS total FROM exams");
+		$row = $check->fetch_assoc();
+		if ((int)$row['total'] === 0) {
+    		run_sql_file($conn, __DIR__ . '/dummy_exams.sql');
+		}
 
                 // Create admin if not exists
                 $hashed_pass = password_hash($admin_pass, PASSWORD_DEFAULT);
