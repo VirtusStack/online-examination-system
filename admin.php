@@ -200,12 +200,26 @@ function logout() {
 }
 
 function dashboard() {
+    global $pdo;
+
+    // Fetch dashboard stats 
     $results = [
-        'pageTitle' => 'Dashboard',
-        'adminName' => $_SESSION['admin_name'] ?? 'Unknown'
+        'pageTitle'   => 'Dashboard',
+        'adminName'   => $_SESSION['admin_name'] ?? 'Unknown',
+
+        'totalExams'      => $pdo->query("SELECT COUNT(*) FROM exams")->fetchColumn(),
+        'activeExams'     => $pdo->query("SELECT COUNT(*) FROM exams WHERE status='Active'")->fetchColumn(),
+        'totalBanks'      => $pdo->query("SELECT COUNT(*) FROM question_banks")->fetchColumn(),
+        'totalQuestions'  => $pdo->query("SELECT COUNT(*) FROM questions")->fetchColumn(),
+        'totalStudents'   => $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn(),
+        'totalResults'    => $pdo->query("
+                                SELECT COUNT(*) 
+                                FROM exam_results 
+                                WHERE submitted_at IS NOT NULL
+                            ")->fetchColumn()
     ];
 
-    require(__DIR__ . "/templates/common/index.php");
+    require(TEMPLATE_PATH . "/common/index.php");
 }
 
 // -------------------------
