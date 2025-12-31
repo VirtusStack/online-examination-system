@@ -32,7 +32,7 @@ if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_admin'])) {
 }
 
 //  FORCE LOGIN IF NOT LOGGED IN
-$action = $_GET['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 if (!isset($_SESSION['admin_id']) && $action !== 'login') {
     $action = 'login';
 }
@@ -852,19 +852,24 @@ function editExam() {
     $results['hard_percent']   = $exam['hard_percentage']   ?? $hard_percent;
 
     // --------------------------
-    // Load exam link info
-    // --------------------------
-    $stmtLink = $pdo->prepare("SELECT * FROM exam_links WHERE exam_id=? LIMIT 1");
-    $stmtLink->execute([$exam_id]);
-    $linkInfo = $stmtLink->fetch(PDO::FETCH_ASSOC);
+   // Load exam link info
+   // --------------------------
+$stmtLink = $pdo->prepare("SELECT * FROM exam_links WHERE exam_id=?");
+$stmtLink->execute([$exam_id]);
+$linkRows = $stmtLink->fetchAll(PDO::FETCH_ASSOC);
 
-    $baseUrl = rtrim(BASE_URL, '/') . '/';
-    $results['exam_link'] = !empty($linkInfo['unique_link'])
-        ? $baseUrl . "student.php?action=startExam&link=" . $linkInfo['unique_link']
-        : '';
+// Take first link just for display purpose
+$linkInfo = $linkRows[0] ?? null;
 
-    $results['expires_at'] = $linkInfo['expires_at'] ?? '';
-    $results['exam_password'] = '';
+$baseUrl = rtrim(BASE_URL, '/') . '/';
+
+$results['exam_link'] = $linkInfo
+    ? $baseUrl . "student.php?action=startExam&link=" . $linkInfo['unique_link']
+    : '';
+
+$results['expires_at'] = $linkInfo['expires_at'] ?? '';
+$results['exam_password'] = '';
+
 
     // --------------------------
     // Prefill exam details
@@ -896,6 +901,8 @@ function editExam() {
         $assign_data = $_POST['assign_data'] ?? [];
 
         $exam_question_sources = $_POST['exam_question_sources'] ?? [];
+
+	$reassign_students = isset($_POST['reassign_students']) ? 1 : 0;
 
         // Difficulty %
         $easy_percent   = (int)($_POST['easy_percent'] ?? 20);
@@ -933,7 +940,7 @@ function editExam() {
                 'exam_description'  => $exam_description,
                 'duration_minutes'  => $duration_minutes,
                 'total_marks'       => $total_marks,
-                'pass_marks'        => $pass_marks,       // <--- ADDED
+                'pass_marks'        => $pass_marks,       
                 'total_questions'   => $total_questions,
 
                 'shuffle_questions' => $shuffle_questions,
@@ -950,6 +957,18 @@ function editExam() {
                 'medium_percentage' => $medium_percent,
                 'hard_percentage'   => $hard_percent
             ]);
+
+	    // --------------------------
+	    // Re-assign students ONLY if admin requested
+            // --------------------------
+            if ($reassign_students) {
+            Exam::assignStudents(
+            $pdo,
+            $exam_id,
+            $assign_type,
+            $assign_data
+    	        );
+	     }
 
             // --------------------------
             // Update Question Sources
@@ -987,30 +1006,28 @@ function editExam() {
                 Exam::generateQuestions($pdo, $exam_id);
             }
 
-            // --------------------------
-            // Update exam link password + expiry
-            // --------------------------
-            $password   = $_POST['exam_password'] ?? '';
-            $expires_at = $_POST['expires_at'] ?? null;
+	  // Update exam link password + expiry (ALL PENDING STUDENTS)
+	  $password   = $_POST['exam_password'] ?? '';
+	  $expires_at = $_POST['expires_at'] ?? null;
 
-            if ($linkInfo) {
-                $stmt = $pdo->prepare("UPDATE exam_links SET password=?, expires_at=? WHERE exam_id=?");
-                $stmt->execute([
-                    $password ? password_hash($password, PASSWORD_DEFAULT) : $linkInfo['password'],
-                    $expires_at,
-                    $exam_id
-                ]);
-                $finalLinkCode = $linkInfo['unique_link'];
-            } else {
-                $finalLinkCode = 'exam-' . $exam_id . '-' . bin2hex(random_bytes(4));
-                Exam::createExamLink($pdo, $exam_id, $finalLinkCode, $password, $expires_at);
-            }
+	  $stmt = $pdo->prepare("
+    	     UPDATE exam_links el
+    	     LEFT JOIN exam_results er ON er.link_id = el.link_id
+    	     SET 
+        	el.expires_at = ?,
+        	el.password = IF(?, ?, el.password)
+    	     WHERE el.exam_id = ?
+     	      AND er.started_at IS NULL
+	");
 
-            $results['exam_link'] = $baseUrl . "student.php?action=startExam&link=" . $finalLinkCode;
-            $results['message'] = "Exam updated successfully!";
-            $results['total_questions'] = $total_questions;
-        }
+	$stmt->execute([
+   	 $expires_at,
+    	$password,
+    $password ? password_hash($password, PASSWORD_DEFAULT) : null,
+    	$exam_id
+    ]);
 
+ 
         // --------------------------
         // Preserve form fields
         // --------------------------
@@ -1039,7 +1056,7 @@ function editExam() {
         $results['medium_percent'] = $medium_percent;
         $results['hard_percent']   = $hard_percent;
     }
-
+}
     require(TEMPLATE_PATH . "/exams/edit_exam.php");
 }
 
@@ -1422,6 +1439,29 @@ function manageResults() {
         }
     }
 
+// Handle publish result (STUDENT-WISE)
+if (isset($_POST['publish_result_id'])) {
+
+    $result_id = (int)$_POST['publish_result_id'];
+
+
+    $stmt = $pdo->prepare("
+        UPDATE exam_results
+        SET result_published = 1
+        WHERE result_id = ?
+          AND submitted_at IS NOT NULL
+        LIMIT 1
+    ");
+
+
+    if ($stmt->execute([$result_id])) {
+        $results['message'] = "Result published successfully!";
+    } else {
+        $results['message'] = "Failed to publish result!";
+    }
+}
+
+
     // Pagination
     $perPage = 25;
     $page    = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -1433,22 +1473,23 @@ function manageResults() {
     $totalPages = ceil($total / $perPage);
 
     // Fetch submitted results for current page
-    $stmt = $pdo->prepare("
-        SELECT 
-            r.result_id,
-            r.exam_id,
-            r.student_name,
-            r.student_email,
-            r.total_marks,
-            r.obtained_marks,
-            r.started_at,
-            r.submitted_at,
-            e.exam_title
-        FROM exam_results r
-        LEFT JOIN exams e ON r.exam_id = e.exam_id
-        WHERE r.submitted_at IS NOT NULL
-        ORDER BY r.result_id DESC
-        LIMIT :limit OFFSET :offset
+    $stmt = $pdo->prepare("SELECT 
+    r.result_id,
+    r.exam_id,
+    r.student_name,
+    r.student_email,
+    r.total_marks,
+    r.obtained_marks,
+    r.started_at,
+    r.submitted_at,
+    r.result_published,
+    e.exam_title
+  FROM exam_results r
+  LEFT JOIN exams e ON r.exam_id = e.exam_id
+  WHERE r.submitted_at IS NOT NULL
+  ORDER BY r.result_id DESC
+  LIMIT :limit OFFSET :offset
+
     ");
 
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
