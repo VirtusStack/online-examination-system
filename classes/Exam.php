@@ -152,75 +152,161 @@ public static function getAllStudents($pdo) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
     
-// Assign students to exam AND create unique exam links
+// Assign students to exam AND create unique exam links + result rows
 public static function assignStudents($pdo, $exam_id, $type, $data) {
+
+    // Make sure exam_id is integer (security + consistency)
     $exam_id = (int)$exam_id;
 
-    // Delete old assignments
-    $stmtDel = $pdo->prepare("DELETE FROM exam_assigned_students WHERE exam_id = ?");
-    $stmtDel->execute([$exam_id]);
+    // Start transaction so all DB operations succeed or fail together
+    $pdo->beginTransaction();
 
-    $students = [];
+    try {
 
-    // Get students to assign
-    if ($type === 'class' && !empty($data['class_id'])) {
-        $class_id = (int)$data['class_id'];
-        $stmt = $pdo->prepare("SELECT student_id, name, email FROM students WHERE class_id = ?");
-        $stmt->execute([$class_id]);
-        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } elseif ($type === 'individual' && !empty($data['student_ids'])) {
-        $ids = is_array($data['student_ids']) 
-               ? $data['student_ids'] 
-               : explode(',', $data['student_ids']);
-        $ids = array_map('intval', $ids);
+        // ---------------------------------------------------
+        // STEP 1: CLEAN OLD ASSIGNMENT DATA FOR THIS EXAM
+        // ---------------------------------------------------
+        // Remove previously assigned students
+        $pdo->prepare("DELETE FROM exam_assigned_students WHERE exam_id=?")
+            ->execute([$exam_id]);
 
-        $stmt = $pdo->prepare("SELECT student_id, name, email FROM students WHERE student_id IN (" . implode(',', $ids) . ")");
-        $stmt->execute();
-        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+        // Remove previously generated exam links
+        $pdo->prepare("DELETE FROM exam_links WHERE exam_id=?")
+            ->execute([$exam_id]);
 
-    // Fetch exam total_marks for results
-    $stmtExam = $pdo->prepare("SELECT total_marks, pass_marks FROM exams WHERE exam_id=? LIMIT 1");
-    $stmtExam->execute([$exam_id]);
-    $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
-    $total_marks = $exam['total_marks'] ?? 0;
-    $pass_marks  = $exam['pass_marks'] ?? 0;
+        // Remove previous exam result records
+        $pdo->prepare("DELETE FROM exam_results WHERE exam_id=?")
+            ->execute([$exam_id]);
 
-    // Insert assigned students AND create exam links & results
-    if (!empty($students)) {
-        $stmtInsert = $pdo->prepare("INSERT INTO exam_assigned_students (exam_id, student_id) VALUES (?, ?)");
-        $stmtLink   = $pdo->prepare("
-            INSERT INTO exam_links (exam_id, unique_link, student_email, student_name, created_at)
-            VALUES (?, ?, ?, ?, NOW())
-        ");
-        $stmtResult = $pdo->prepare("
-            INSERT INTO exam_results (exam_id, link_id, student_name, student_email, total_marks, obtained_marks, started_at, submitted_at)
-            VALUES (?, ?, ?, ?, ?, 0.00, NULL, NULL)
-        ");
+        // ---------------------------------------------------
+        // STEP 2: FETCH STUDENTS TO ASSIGN
+        // ---------------------------------------------------
+        $students = [];
 
-        foreach ($students as $student) {
-            // Assign student
-            $stmtInsert->execute([$exam_id, $student['student_id']]);
+        // CASE 1: Assign by CLASS
+        if ($type === 'class' && !empty($data['class_id'])) {
 
-            // Check if link already exists
-            $stmtCheck = $pdo->prepare("SELECT link_id FROM exam_links WHERE exam_id=? AND student_email=?");
-            $stmtCheck->execute([$exam_id, $student['email']]);
-            if (!$existingLink = $stmtCheck->fetch()) {
-                // Create unique link
-                $unique_link = uniqid('exam_', true);
-                $stmtLink->execute([$exam_id, $unique_link, $student['email'], $student['name']]);
-                $link_id = $pdo->lastInsertId();
+            // Fetch students of selected class + class name
+            $stmt = $pdo->prepare("
+                SELECT 
+                    s.student_id,
+                    s.name,
+                    s.email,
+                    c.class_name
+                FROM students s
+                LEFT JOIN classrooms  c ON c.class_id = s.class_id
+                WHERE s.class_id = ?
+            ");
 
-                // Create corresponding exam result
-                $stmtResult->execute([
-                    $exam_id,
-                    $link_id,
-                    $student['name'],
-                    $student['email'],
-                    $total_marks
-                ]);
-            }
+            $stmt->execute([(int)$data['class_id']]);
+            $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         }
+        // CASE 2: Assign INDIVIDUAL students
+        elseif ($type === 'individual' && !empty($data['student_ids'])) {
+
+            // Convert student IDs into integer array
+            $ids = array_map('intval', (array)$data['student_ids']);
+
+            // Fetch selected students + class name
+            $stmt = $pdo->prepare("
+                SELECT 
+                    s.student_id,
+                    s.name,
+                    s.email,
+                    c.class_name
+                FROM students s
+                LEFT JOIN classrooms  c ON c.class_id = s.class_id
+                WHERE s.student_id IN (" . implode(',', $ids) . ")
+            ");
+
+            $stmt->execute();
+            $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // ---------------------------------------------------
+        // STEP 3: FETCH EXAM MARK DETAILS
+        // ---------------------------------------------------
+        $stmtExam = $pdo->prepare("
+            SELECT total_marks, pass_marks 
+            FROM exams 
+            WHERE exam_id=?
+        ");
+        $stmtExam->execute([$exam_id]);
+        $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
+
+        // ---------------------------------------------------
+        // STEP 4: PREPARE INSERT STATEMENTS
+        // ---------------------------------------------------
+
+        // Insert assigned student record
+        $stmtAssign = $pdo->prepare("
+            INSERT INTO exam_assigned_students (exam_id, student_id)
+            VALUES (?, ?)
+        ");
+
+       // Insert unique exam link for student
+       $stmtLink = $pdo->prepare("
+         INSERT INTO exam_links 
+        (exam_id, unique_link, student_email, student_name, student_class, is_used, created_at)
+        VALUES (?, ?, ?, ?, ?, 0, NOW())
+	");
+
+        // Insert exam result record (created before exam starts)
+        $stmtResult = $pdo->prepare("
+            INSERT INTO exam_results 
+            (exam_id, link_id, student_name, student_email, total_marks, obtained_marks)
+            VALUES (?, ?, ?, ?, ?, 0)
+        ");
+
+        // ---------------------------------------------------
+        // STEP 5: ASSIGN EACH STUDENT
+        // ---------------------------------------------------
+        foreach ($students as $student) {
+
+            // Assign student to exam
+            $stmtAssign->execute([
+                $exam_id,
+                $student['student_id']
+            ]);
+
+            // Generate secure random exam link
+            $unique_link = bin2hex(random_bytes(16));
+
+            // Insert exam link
+            $stmtLink->execute([
+                $exam_id,
+                $unique_link,
+                $student['email'],
+                $student['name'],
+                $student['class_name']
+            ]);
+
+            // Get link_id for result table
+            $link_id = $pdo->lastInsertId();
+
+            // Create exam result row
+            $stmtResult->execute([
+                $exam_id,
+                $link_id,
+                $student['name'],
+                $student['email'],
+                $exam['total_marks']
+            ]);
+        }
+
+        // ---------------------------------------------------
+        // STEP 6: COMMIT TRANSACTION
+        // ---------------------------------------------------
+        $pdo->commit();
+
+    } catch (Exception $e) {
+
+        // If anything fails, rollback all DB changes
+        $pdo->rollBack();
+
+        // Re-throw exception for debugging/logging
+        throw $e;
     }
 }
 
@@ -329,7 +415,35 @@ public static function generateQuestions($pdo, $exam_id)
         }
 
         // Ensure exact total (deduplicate within this source)
-        $selected = array_slice(array_unique($selected), 0, $total);
+$selected = array_values(array_unique($selected));
+
+/*  FINAL REFILL LOOP — GUARANTEES EXACT COUNT */
+while (count($selected) < $total) {
+
+    $exclude = array_merge($selected, $globalSelected);
+    $excludeSQL = empty($exclude)
+        ? ""
+        : "AND question_id NOT IN (" . implode(",", $exclude) . ")";
+
+    $stmt = $pdo->prepare("
+        SELECT question_id
+        FROM questions
+        WHERE bank_id = ?
+          AND subject_id = ?
+          $excludeSQL
+        ORDER BY RAND()
+        LIMIT 1
+    ");
+    $stmt->execute([$bank_id, $subject_id]);
+    $extra = $stmt->fetchColumn();
+
+    if (!$extra) {
+        break; // no more unique questions available
+    }
+
+    $selected[] = $extra;
+}
+
 
         // Add to global list to prevent repeats across sources
         $globalSelected = array_merge($globalSelected, $selected);
