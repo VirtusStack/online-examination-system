@@ -49,10 +49,11 @@ include __DIR__ . "/header.php";
                             <!-- Exam Form -->
                             <form id="examForm" method="post" action="student.php?action=submitExam&exam_id=<?= intval($exam['exam_id'] ?? 0); ?>">
                                 <!-- Pass link_id to controller for saving results -->
-				<input type="hidden" name="link_id" value="<?= intval($link['link_id']); ?>">
+				<input type="hidden" name="link_id" value="<?= intval($_SESSION['link_id']); ?>">
 
                                 <?php foreach ($questions as $index => $q): ?>
-                                    <div class="question-block mb-4 <?= $index < 5 ? '' : 'd-none'; ?>" data-index="<?= $index; ?>">
+                                    <div class="question-block mb-4" data-index="<?= $index; ?>">
+
                                         <p><strong><?= ($index + 1) . ". " . htmlspecialchars($q['question_text']); ?></strong></p>
 
                                         <?php foreach ($q['options'] as $optKey => $optText): ?>
