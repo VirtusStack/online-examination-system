@@ -64,6 +64,17 @@ include __DIR__ . "/header.php";
                                 <li>Do not switch tabs, otherwise your attempt may be auto-submitted.</li>
                                 <li>Ensure a stable internet connection.</li>
                                 <li>Once submitted, you cannot reattempt the exam.</li>
+
+				<?php if (!empty($exam['negative_marking']) && $exam['negative_marking'] > 0): ?>
+    <li>
+        <strong>Negative Marking:</strong>
+        <?= htmlspecialchars($exam['negative_marking']); ?> mark(s) will be deducted for each wrong answer.
+    </li>
+<?php else: ?>
+    <li>
+        <strong>Negative Marking:</strong> No negative marking.
+    </li>
+<?php endif; ?>
                             </ul>
 
                             <hr>
