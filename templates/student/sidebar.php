@@ -4,15 +4,22 @@
     </a>
     <hr class="sidebar-divider my-0">
 
-    <li class="nav-item">
-        <a class="nav-link" href="student.php?action=dashboard">
-            <i class="fas fa-fw fa-tachometer-alt"></i>
-            <span>Dashboard</span>
-        </a>
-    </li>
+ <li class="nav-item">
+    <a class="nav-link" href="student.php?action=dashboard">
+        <i class="fas fa-fw fa-tachometer-alt"></i>
+        <span>Dashboard</span>
+    </a>
+</li>
 
-   
-    <li class="nav-item">
+<li class="nav-item">
+    <a class="nav-link" href="student.php?action=results">
+        <i class="fas fa-fw fa-poll"></i>
+        <span>Results</span>
+    </a>
+</li>
+	
+    <hr class="sidebar-divider">
+       <li class="nav-item">
         <a class="nav-link" href="student.php?action=logout">
             <i class="fas fa-fw fa-sign-out-alt"></i>
             <span>Logout</span>
