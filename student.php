@@ -49,6 +49,10 @@ switch ($action) {
         studentDashboard();
         break;
 
+    case 'liveExamsList':
+    liveExamsList();
+    break;
+
     // Access exam via unique email link
     case 'examAccess':
         examAccess();
@@ -71,6 +75,14 @@ switch ($action) {
     examSubmittedPage();
     break;
 
+   case 'results':
+    studentResultsList();
+    break;
+
+   // View result
+ case "viewStudentResult":
+    studentViewResult();
+    break;
 }
 
 // FUNCTION DEFINITIONS
@@ -320,10 +332,17 @@ function liveExam() {
         exit;
     }
 
+    /*  FETCH EXAM INFO */
     $stmtExam = $pdo->prepare("SELECT * FROM exams WHERE exam_id = ? LIMIT 1");
     $stmtExam->execute([$exam_id]);
     $exam = $stmtExam->fetch(PDO::FETCH_ASSOC);
 
+    if (!$exam) {
+        echo "Invalid exam.";
+        exit;
+    }
+
+    /*  FETCH QUESTIONS (NO DISTINCT / NO GROUP BY) */
     $stmt = $pdo->prepare("
         SELECT q.*
         FROM exam_questions eq
@@ -334,15 +353,29 @@ function liveExam() {
     $stmt->execute([$exam_id]);
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    /* =====================================================
-       SAFETY CHECK
-    ===================================================== */
+    /* FORCE UNIQUE QUESTIONS BY question_id (CRITICAL FIX) */
+    $uniqueQuestions = [];
+
+    foreach ($questions as $q) {
+        $uniqueQuestions[$q['question_id']] = $q;
+    }
+
+    $questions = array_values($uniqueQuestions);
+    
+// Shuffle questions if enabled in exam
+if (!empty($exam['shuffle_questions'])) {
+    shuffle($questions);
+}
+
+    /* SAFETY CHECK */
     if (empty($questions)) {
         echo "No questions found for this exam. Please contact admin.";
         exit;
     }
 
+    /* PREPARE OPTIONS + SHUFFLE IF ENABLED */
     foreach ($questions as &$q) {
+
         $q['options'] = [
             'A' => $q['option_a'],
             'B' => $q['option_b'],
@@ -350,33 +383,30 @@ function liveExam() {
             'D' => $q['option_d']
         ];
 
-        // Shuffle options if enabled
+        // Shuffle options if enabled in exam
         if (!empty($exam['shuffle_options'])) {
             $q['options'] = shuffle_assoc($q['options']);
         }
     }
+    unset($q); // safety
 
-    // Shuffle questions if enabled
-    if (!empty($exam['shuffle_questions'])) {
-        shuffle($questions);
-    }
-
-    // LOAD VIEW
+    /* LOAD VIEW */
     require(__DIR__ . "/templates/student/live_exam.php");
 }
 
-
- //Helper function to shuffle associative arrays
-
+/* Helper function to shuffle associative array */
 function shuffle_assoc($array) {
     $keys = array_keys($array);
     shuffle($keys);
     $shuffled = [];
+
     foreach ($keys as $key) {
         $shuffled[$key] = $array[$key];
     }
+
     return $shuffled;
 }
+
 
 // submit exam
 function submitExam() {
@@ -390,65 +420,126 @@ function submitExam() {
         exit;
     }
 
-    // Fetch existing result row
+    // ---------------------------------------------------
+    // FETCH RESULT ROW (AND CHECK IF ALREADY SUBMITTED)
+    // ---------------------------------------------------
     $stmtRes = $pdo->prepare("
-        SELECT result_id 
+        SELECT result_id, submitted_at 
         FROM exam_results 
         WHERE exam_id = ? AND link_id = ?
         LIMIT 1
     ");
     $stmtRes->execute([$exam_id, $link_id]);
-    $result_id = $stmtRes->fetchColumn();
+    $result = $stmtRes->fetch(PDO::FETCH_ASSOC);
 
-    if (!$result_id) {
+    if (!$result) {
         echo "Exam result record not found!";
         exit;
     }
 
-    $answers = $_POST['answers'] ?? [];
-
-    $stmtNeg = $pdo->prepare("SELECT negative_marking FROM exams WHERE exam_id = ?");
-    $stmtNeg->execute([$exam_id]);
-    $negative_mark = floatval($stmtNeg->fetchColumn());
-
-    $obtained = 0;
-    $total = 0;
-
-    foreach ($answers as $question_id => $selected) {
-        $stmtQ = $pdo->prepare("SELECT correct_option, marks_per_question FROM questions WHERE question_id = ?");
-        $stmtQ->execute([$question_id]);
-        $qData = $stmtQ->fetch(PDO::FETCH_ASSOC);
-        if (!$qData) continue;
-
-        $marks = floatval($qData['marks_per_question']);
-        $total += $marks;
-
-        $is_correct = ($selected == $qData['correct_option']) ? 1 : 0;
-        $score = $is_correct ? $marks : (($negative_mark > 0) ? -$negative_mark : 0);
-
-        $obtained += $score;
-
-        $stmtA = $pdo->prepare("
-            INSERT INTO exam_answers (result_id, question_id, selected_option, is_correct)
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmtA->execute([$result_id, $question_id, $selected, $is_correct]);
+    // BLOCK DOUBLE SUBMISSION
+    if (!empty($result['submitted_at'])) {
+        header("Location: student.php?action=examSubmitted&result_id=" . $result['result_id']);
+        exit;
     }
 
-    $stmtUpdate = $pdo->prepare("
-        UPDATE exam_results
-        SET total_marks = ?, obtained_marks = ?, submitted_at = NOW()
-        WHERE result_id = ?
-    ");
-    $stmtUpdate->execute([$total, $obtained, $result_id]);
+    $result_id = $result['result_id'];
+    $answers   = $_POST['answers'] ?? [];
 
-    // Clear ONLY exam tracking
+    // ---------------------------------------------------
+    // FETCH NEGATIVE MARKING
+    // ---------------------------------------------------
+    $stmtNeg = $pdo->prepare("
+        SELECT negative_marking 
+        FROM exams 
+        WHERE exam_id = ?
+    ");
+    $stmtNeg->execute([$exam_id]);
+    $negative_mark = (float)$stmtNeg->fetchColumn();
+
+    $obtained = 0;
+    $total    = 0;
+
+    // ---------------------------------------------------
+    // START TRANSACTION
+    // ---------------------------------------------------
+    $pdo->beginTransaction();
+
+    try {
+
+        foreach ($answers as $question_id => $selected) {
+
+            // IMPORTANT: validate question belongs to this exam
+            $stmtQ = $pdo->prepare("
+                SELECT q.correct_option, q.marks_per_question
+                FROM exam_questions eq
+                JOIN questions q ON q.question_id = eq.question_id
+                WHERE eq.exam_id = ? AND q.question_id = ?
+                LIMIT 1
+            ");
+            $stmtQ->execute([$exam_id, $question_id]);
+            $qData = $stmtQ->fetch(PDO::FETCH_ASSOC);
+
+            if (!$qData) continue;
+
+            $marks = (float)$qData['marks_per_question'];
+            // Fetch exam total marks once
+	    $stmtTM = $pdo->prepare("SELECT total_marks FROM exams WHERE exam_id=?");
+ 	    $stmtTM->execute([$exam_id]);
+            $total = (float)$stmtTM->fetchColumn();
+
+
+            $is_correct = ($selected === $qData['correct_option']) ? 1 : 0;
+
+            $score = $is_correct
+                ? $marks
+                : (($negative_mark > 0) ? -$negative_mark : 0);
+
+            $obtained += $score;
+
+            // Save answer
+            $stmtA = $pdo->prepare("
+                INSERT INTO exam_answers 
+                (result_id, question_id, selected_option, is_correct)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmtA->execute([
+                $result_id,
+                $question_id,
+                $selected,
+                $is_correct
+            ]);
+        }
+
+        if ($obtained < 0) {
+            $obtained = 0;
+        }
+
+        // ---------------------------------------------------
+        // UPDATE RESULT
+        // ---------------------------------------------------
+        $stmtUpdate = $pdo->prepare("
+            UPDATE exam_results
+            SET total_marks = ?, 
+                obtained_marks = ?, 
+                submitted_at = NOW()
+            WHERE result_id = ?
+        ");
+        $stmtUpdate->execute([$total, $obtained, $result_id]);
+
+        $pdo->commit();
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+
+    // CLEAR ONLY EXAM SESSION (NOT LOGIN)
     unset($_SESSION['exam_id'], $_SESSION['link_id']);
 
     header("Location: student.php?action=examSubmitted&result_id=" . $result_id);
     exit;
 }
-
 
 // Exam submitted page
 function examSubmittedPage() {
@@ -477,5 +568,83 @@ function examSubmittedPage() {
 
 }
 
+function studentResultsList() {
+    global $pdo;
 
+    $student_id    = $_SESSION['student_id'] ?? 0;
+    $student_email = $_SESSION['student_email'] ?? '';
+
+    if (!$student_id || !$student_email) {
+        die("Unauthorized");
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            er.result_id,
+            er.total_marks,
+            er.obtained_marks,
+            er.submitted_at,
+            e.exam_title,
+            e.pass_marks
+        FROM exam_results er
+        INNER JOIN exams e 
+            ON e.exam_id = er.exam_id
+        INNER JOIN exam_links el
+            ON el.link_id = er.link_id
+        INNER JOIN exam_assigned_students eas
+            ON eas.exam_id = e.exam_id
+        WHERE eas.student_id = ?
+          AND el.student_email = ?
+          AND er.result_published = 1
+          AND er.submitted_at IS NOT NULL
+        ORDER BY er.submitted_at DESC
+    ");
+
+    $stmt->execute([$student_id, $student_email]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    require __DIR__ . '/templates/student/results_list.php';
+}
+
+
+
+function studentViewResult() {
+    global $pdo;
+
+    $student_id    = $_SESSION['student_id'] ?? 0;
+    $student_email = $_SESSION['student_email'] ?? '';
+    $result_id     = (int)($_GET['result_id'] ?? 0);
+
+    if (!$student_id || !$student_email || !$result_id) {
+        die("Invalid access");
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            er.*,
+            e.exam_title,
+            e.pass_marks
+        FROM exam_results er
+        INNER JOIN exams e 
+            ON e.exam_id = er.exam_id
+        INNER JOIN exam_links el
+            ON el.link_id = er.link_id
+        INNER JOIN exam_assigned_students eas
+            ON eas.exam_id = e.exam_id
+        WHERE er.result_id = ?
+          AND eas.student_id = ?
+          AND el.student_email = ?
+          AND er.result_published = 1
+        LIMIT 1
+    ");
+
+    $stmt->execute([$result_id, $student_id, $student_email]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$result) {
+        die("Result not found or access denied!");
+    }
+
+    require __DIR__ . '/templates/student/view_result.php';
+}
 ?>
