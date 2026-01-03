@@ -215,6 +215,17 @@ $results['students'] = $results['students'] ?? [];
                                 <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple students.</small>
                             </div>
 
+			    <!-- Reassign Students -->
+			    <div class="form-check mt-3 mb-4">
+    				<input class="form-check-input" type="checkbox" name="reassign_students" value="1" id="reassign_students">
+    				<label class="form-check-label" for="reassign_students">
+       				   Re-assign students & regenerate exam links
+    				</label>
+    				<small class="text-muted d-block">
+       				     Tick this only if you want to reassign students and generate fresh exam links.
+    				</small>
+			    </div>
+
                             <!-- Exam Link & Password -->
                             <div class="form-group mb-3">
                                 <label>Online Exam Link:</label>
