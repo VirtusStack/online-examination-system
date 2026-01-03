@@ -60,6 +60,7 @@ $perPage     = 25;
                                         <th>Total Marks</th>
                                         <th>Obtained</th>
                                         <th>Started At</th>
+					<th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -74,6 +75,21 @@ $perPage     = 25;
                                                 <td><?= $res['total_marks'] ?></td>
                                                 <td><?= $res['obtained_marks'] ?></td>
                                                 <td><?= htmlspecialchars($res['started_at'] ?? '-') ?></td>
+						<td>
+						<?php if ($res['result_published'] == 1): ?>
+   						   <span class="badge bg-success">Published</span>
+						<?php else: ?>
+    						   <form method="post" action="<?= BASE_URL ?>/admin.php" style="display:inline;">
+        						<input type="hidden" name="action" value="manageResults">
+       							<input type="hidden" name="publish_result_id" value="<?= $res['result_id'] ?>">
+        						<button class="btn btn-sm btn-success"
+                						onclick="return confirm('Publish result for this exam?')">
+            							Publish
+        						</button>
+    						</form>
+						<?php endif; ?>
+						</td>
+
                                                 <td>
                                                     <!-- View -->
                                                     <a class="btn btn-sm btn-info" 
