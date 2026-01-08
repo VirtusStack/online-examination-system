@@ -115,6 +115,13 @@
                             </span>
                         </h4>
 
+			<h5 class="mt-3">
+    			Percentage:
+    			<span class="text-info">
+        			<?= htmlspecialchars($results['percentage']) ?>%
+    			</span>
+			</h5>
+
                         <h5 class="mt-3">
                             Status: 
                             <?php if ($results['obtained'] >= $results['exam']['pass_marks']): ?>
