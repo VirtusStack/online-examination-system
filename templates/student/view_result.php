@@ -75,6 +75,13 @@ include __DIR__ . "/sidebar.php";
                             </span>
                         </h4>
 
+			<h5 class="mt-3">
+    			Percentage:
+    			<span class="text-info">
+        			<?= $result['percentage'] ?>%
+    			</span>
+			</h5>
+
                         <h5 class="mt-3">
                             Result Status:
                             <?php if ($result['obtained_marks'] >= $result['pass_marks']): ?>
