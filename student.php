@@ -148,13 +148,22 @@ function studentLogin() {
     require(__DIR__ . "/templates/student/login.php");
 }
 
-// STUDENT LOGOUT
 function studentLogout() {
+
+    // Remove remember-me cookie
     if (isset($_COOKIE['remember_student'])) {
         setcookie("remember_student", "", time() - 3600, "/");
     }
 
-    session_destroy();
+    // Unset ONLY student session data
+    unset($_SESSION['student_id']);
+    unset($_SESSION['student_name']);
+    unset($_SESSION['student_email']);
+    unset($_SESSION['login_time']);
+
+    // Security: regenerate session ID
+    session_regenerate_id(true);
+
     header("Location: student.php?action=login");
     exit;
 }
@@ -606,8 +615,6 @@ function studentResultsList() {
     require __DIR__ . '/templates/student/results_list.php';
 }
 
-
-
 function studentViewResult() {
     global $pdo;
 
@@ -645,6 +652,17 @@ function studentViewResult() {
         die("Result not found or access denied!");
     }
 
+    /* STEP 1: CALCULATE PERCENTAGE (DO NOT STORE IN DB */
+    $result['percentage'] = 0;
+
+    if ((float)$result['total_marks'] > 0) {
+        $result['percentage'] = round(
+            ($result['obtained_marks'] / $result['total_marks']) * 100,
+            2
+        );
+    }
+
+    /* LOAD RESULT VIEW */
     require __DIR__ . '/templates/student/view_result.php';
 }
 ?>
