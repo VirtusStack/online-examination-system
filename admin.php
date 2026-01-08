@@ -39,13 +39,16 @@ if (!isset($_SESSION['admin_id']) && $action !== 'login') {
 
 //  ROUTING
 switch ($action) {
+
     case 'login':
         login();
         break;
+
     case 'logout':
         logout();
         break;
-    default:
+
+    case 'dashboard':
         dashboard();
         break;
 
@@ -143,17 +146,25 @@ case 'editQBS':
     editQBS();
     break;
 
-// Result
-case "manageResults":
-      manageResults();
-      break;
 
-case "viewResult":
-     viewResult();
-     break;
+    // Results
+    case 'manageResults':
+        manageResults();
+        break;
 
+    case 'viewResult':
+        viewResult();
+        break;
+
+   // DOWNLOAD RESULTS (EXCEL)
+    case 'downloadExamResults':
+    downloadExamResults();
+    break;
+
+    default:
+        dashboard();
+        break;
 }
-
 // FUNCTIONS
 
 function login() {
@@ -1461,6 +1472,25 @@ if (isset($_POST['publish_result_id'])) {
     }
 }
 
+// Handle publish ALL results for an exam
+if (isset($_POST['publish_all_exam_id'])) {
+
+    $exam_id = (int)$_POST['publish_all_exam_id'];
+
+    $stmt = $pdo->prepare("
+        UPDATE exam_results
+        SET result_published = 1
+        WHERE exam_id = ?
+          AND submitted_at IS NOT NULL
+    ");
+
+    if ($stmt->execute([$exam_id])) {
+        $results['message'] = "All results published successfully!";
+    } else {
+        $results['message'] = "Failed to publish all results!";
+    }
+}
+
 
     // Pagination
     $perPage = 25;
@@ -1588,7 +1618,139 @@ function viewResult() {
     $stmtQ->execute([$resultId]);
     $results['questions'] = $stmtQ->fetchAll(PDO::FETCH_ASSOC);
 
+  /* STEP 1: CALCULATE PERCENTAGE (DO NOT STORE IN DB) */
+$results['percentage'] = 0;
+
+if ((float)$results['total_marks'] > 0) {
+    $results['percentage'] = round(
+        ($results['obtained'] / $results['total_marks']) * 100,
+        2
+    );
+}
+
     // Load template
     require(TEMPLATE_PATH . "/results/view_result.php");
 }
 
+function downloadExamResults() {
+    global $pdo;
+
+    $exam_id = (int)($_GET['exam_id'] ?? 0);
+    if (!$exam_id) {
+        die("Invalid exam ID");
+    }
+
+    // FETCH RESULT DATA
+    $stmt = $pdo->prepare("
+        SELECT
+            er.result_id,
+            er.student_name,
+            er.student_email,
+            el.unique_link AS link_name,
+            e.exam_title,
+            er.obtained_marks,
+            er.total_marks,
+            er.started_at,
+            er.submitted_at
+        FROM exam_results er
+        JOIN exams e ON er.exam_id = e.exam_id
+        LEFT JOIN exam_links el ON er.link_id = el.link_id
+        WHERE er.exam_id = ?
+          AND er.submitted_at IS NOT NULL
+        ORDER BY er.submitted_at ASC
+    ");
+    $stmt->execute([$exam_id]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$results) {
+        die("No results found");
+    }
+
+    // CSV HEADERS
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="Exam_Results.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    // COLUMN HEADINGS (COLLEGE FORMAT)
+    fputcsv($output, [
+        'First name',
+        'Last name',
+        'Email',
+        'Link name',
+        'Test name',
+        'Percentage',
+        'Points received',
+        'Points available',
+        'Duration',
+        'Date started',
+        'Date finished',
+        'Result',
+        'Certificate',
+        'Monitor : Camera',
+        'Monitor : Screen',
+        'Monitor : Status',
+        'ecm_user',
+        'Access code',
+        'IP Address',
+        'Extra info'
+    ]);
+
+    foreach ($results as $row) {
+
+        // SPLIT NAME
+        $nameParts = explode(' ', trim($row['student_name']), 2);
+        $firstName = $nameParts[0] ?? '';
+        $lastName  = $nameParts[1] ?? '';
+
+        // PERCENTAGE
+        $percentage = ($row['total_marks'] > 0)
+            ? round(($row['obtained_marks'] / $row['total_marks']) * 100)
+            : 0;
+
+        // DURATION
+        $duration = '-';
+        if ($row['started_at'] && $row['submitted_at']) {
+            $seconds = strtotime($row['submitted_at']) - strtotime($row['started_at']);
+            $duration = gmdate("H:i:s", $seconds);
+        }
+
+        // CERTIFICATE CODE
+        $certificate = strtoupper(substr(md5($row['result_id']), 0, 12));
+
+        //  COLLEGE DATE FORMAT
+        $startedAt  = $row['started_at']
+            ? date('D jS M Y g:ia', strtotime($row['started_at']))
+            : '';
+
+        $submittedAt = $row['submitted_at']
+            ? date('D jS M Y g:ia', strtotime($row['submitted_at']))
+            : '';
+
+        fputcsv($output, [
+            $firstName,
+            $lastName,
+            $row['student_email'],
+            $row['link_name'] ?? '',
+            $row['exam_title'],
+            $percentage . '%',
+            $row['obtained_marks'],
+            $row['total_marks'],
+            $duration,
+            $startedAt,
+            $submittedAt,
+            'Completed',
+            $certificate,
+            0,                // Camera
+            0,                // Screen
+            'Not Monitored',  // Monitoring
+            '',
+            '',
+            '',
+            ''
+        ]);
+    }
+
+    fclose($output);
+    exit;
+}
