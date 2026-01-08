@@ -42,6 +42,35 @@ $perPage     = 25;
                     </div>
                 <?php endif; ?>
 
+		<?php if (!empty($resultsList)): ?>
+
+		<?php
+		$firstExamId = $resultsList[0]['exam_id'];
+		?>
+
+		<div class="mb-3">
+    		<!-- Publish All -->
+    		<form method="post" action="<?= BASE_URL ?>/admin.php" style="display:inline;">
+        	<input type="hidden" name="action" value="manageResults">
+        	<input type="hidden" name="publish_all_exam_id" value="<?= $firstExamId ?>">
+
+       		 <button type="submit"
+                class="btn btn-success"
+                onclick="return confirm('Publish results for ALL students of this exam?')">
+            	<i class="fas fa-bullhorn"></i> Publish All Results
+        	</button>
+    		</form>
+
+    		<!-- Download Excel -->
+    		<a href="<?= BASE_URL ?>/admin.php?action=downloadExamResults&exam_id=<?= $firstExamId ?>"
+       		  class="btn btn-success ml-2">
+        	<i class="fas fa-file-excel"></i> Download Excel
+    		</a>
+		</div>
+
+		<?php endif; ?>
+
+
                 <!-- Results Table Card -->
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
