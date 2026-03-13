@@ -161,6 +161,11 @@ case 'editQBS':
     downloadExamResults();
     break;
 
+    // Upload Question
+    case 'uploadQuestions':
+    uploadQuestions();
+    break;
+
     default:
         dashboard();
         break;
@@ -1753,4 +1758,132 @@ function downloadExamResults() {
 
     fclose($output);
     exit;
+}
+
+function uploadQuestions(){
+
+    global $pdo;
+
+    $results = [];
+    $results['pageTitle'] = "Upload Questions";
+
+    /*
+    =====================================
+    STEP 1: Preview CSV file
+    =====================================
+    */
+
+    if(isset($_POST['preview_csv'])){
+
+        $file = $_FILES['csv_file']['tmp_name'];
+
+        $rows = [];
+
+        if(($handle = fopen($file, "r")) !== FALSE){
+
+            // Skip CSV header
+            fgetcsv($handle);
+
+            while(($data = fgetcsv($handle, 1000, ",")) !== FALSE){
+
+                // Store CSV values (skip sr_no)
+                $rows[] = [
+                    'question_text' => $data[1],
+                    'a' => $data[2],
+                    'b' => $data[3],
+                    'c' => $data[4],
+                    'd' => $data[5],
+                    'correct' => $data[6],
+                    'marks' => $data[7],
+                    'difficulty' => $data[8],
+                    'subject' => $data[9],
+                    'bank' => $data[10]
+                ];
+            }
+
+            fclose($handle);
+        }
+
+        $_SESSION['csv_questions'] = $rows;
+    }
+
+
+   /*
+    =====================================
+    STEP 2: Insert questions into database
+    =====================================
+    */
+
+    if(isset($_POST['insert_questions'])){
+
+        $rows = $_SESSION['csv_questions'] ?? [];
+
+        $errors = [];
+        $duplicates = 0;
+        $inserted = 0;
+
+        foreach($rows as $index => $row){
+
+            // Get subject_id
+            $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_name=?");
+            $stmt->execute([$row['subject']]);
+            $subject_id = $stmt->fetchColumn();
+
+            if(!$subject_id){
+                $errors[] = "Row ".($index+1)." : Subject not found (".$row['subject'].")";
+                continue;
+            }
+
+            // Get bank_id
+            $stmt = $pdo->prepare("SELECT bank_id FROM question_banks WHERE bank_name=?");
+            $stmt->execute([$row['bank']]);
+            $bank_id = $stmt->fetchColumn();
+
+            if(!$bank_id){
+                $errors[] = "Row ".($index+1)." : Question Bank not found (".$row['bank'].")";
+                continue;
+            }
+
+            // Duplicate check
+            $stmt = $pdo->prepare("SELECT question_id FROM questions WHERE question_text=?");
+            $stmt->execute([$row['question_text']]);
+
+            if($stmt->fetch()){
+                $duplicates++;
+                continue;
+            }
+
+            // Insert question
+            $stmt = $pdo->prepare("
+                INSERT INTO questions
+                (bank_id, subject_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks_per_question, difficulty)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ");
+
+            $stmt->execute([
+                $bank_id,
+                $subject_id,
+                $row['question_text'],
+                $row['a'],
+                $row['b'],
+                $row['c'],
+                $row['d'],
+                $row['correct'],
+                $row['marks'],
+                $row['difficulty']
+            ]);
+
+            $inserted++;
+        }
+
+        unset($_SESSION['csv_questions']);
+
+        $results['message'] = "Inserted: $inserted | Duplicates skipped: $duplicates";
+
+        if(!empty($errors)){
+            $results['errors'] = $errors;
+        }
+    }
+
+    require(TEMPLATE_PATH . "/questions/upload_questions.php");
 }
