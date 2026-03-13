@@ -66,6 +66,14 @@
         </div>
     </li>
 
+   <!-- Upload Questions Menu -->
+    <li class="nav-item">
+        <a class="nav-link" href="<?= BASE_URL ?>/admin.php?action=uploadQuestions">
+        <i class="fas fa-upload"></i>
+        <span>Upload Questions</span>
+        </a>
+    </li>
+
     <!-- Questions -->
     <li class="nav-item">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQuestions">
@@ -130,6 +138,7 @@
       </a>
    </li>
 
+  
 
     <hr class="sidebar-divider d-none d-md-block">
 
